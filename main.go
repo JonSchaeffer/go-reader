@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 )
 
 type RSSEntry struct {
@@ -180,4 +181,32 @@ func getNextID(entries []RSSEntry) int {
 		}
 	}
 	return maxID + 1
+}
+
+func getRSSIDbyURL(entries []RSSEntry, url string) *RSSEntry {
+	for i := range entries {
+		if entries[i].URL == url {
+			return &entries[i]
+		}
+	}
+	return nil
+}
+
+func getRSSURLbyID(entries []RSSEntry, id int) *RSSEntry {
+	for i := range entries {
+		if entries[i].ID == id {
+			return &entries[i]
+		}
+	}
+	return nil
+}
+
+func getRSSURLbyContains(entries []RSSEntry, url string) []RSSEntry {
+	var results []RSSEntry
+	for _, entry := range entries {
+		if strings.Contains(strings.ToLower(entry.URL), strings.ToLower(url)) {
+			results = append(results, entry)
+		}
+	}
+	return results
 }
