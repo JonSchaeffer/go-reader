@@ -1,0 +1,15 @@
+meta {
+  name: RSS Feed Conversion
+  type: http
+  seq: 1
+}
+
+get {
+  url: http://{{host_five}}/makefulltextfeed.php?url=[url]
+  body: none
+  auth: inherit
+}
+
+params:query {
+  url: [url]
+}
