@@ -43,6 +43,8 @@ func routeRss(w http.ResponseWriter, r *http.Request) {
 		getRss(w, r)
 	case http.MethodPost:
 		postRss(w, r)
+	case http.MethodDelete:
+		deleteRSSbyID(w, r)
 	default:
 		http.Error(w, "Method is not allowed or supported", http.StatusMethodNotAllowed)
 	}
@@ -209,4 +211,56 @@ func getRSSURLbyContains(entries []RSSEntry, url string) []RSSEntry {
 		}
 	}
 	return results
+}
+
+// Load the RSS data, pop the relevant entry, write to file
+
+func deleteRSSbyID(w http.ResponseWriter, r *http.Request) {
+	// Load data from file
+	rssData, err := loadRSSData()
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error loadting data: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Check for ID paramater
+	idParam := r.URL.Query().Get("id")
+
+	if idParam == "" {
+		http.Error(w, "ID parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	if idParam != "" {
+		// Return specific entry by ID
+		id, err := strconv.Atoi(idParam)
+		if err != nil {
+			http.Error(w, "Invalid ID parameter", http.StatusBadRequest)
+			return
+		}
+
+		found := false
+		for i, entry := range rssData.Entries {
+			if entry.ID == id {
+				rssData.Entries = append(rssData.Entries[:i], rssData.Entries[i+1:]...)
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			http.Error(w, "Entry not found", http.StatusNotFound)
+			return
+		}
+
+		err = saveRSSData(rssData)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Error saving data: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Entry deleted successfully"))
+
+	}
 }

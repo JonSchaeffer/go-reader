@@ -1,0 +1,19 @@
+meta {
+  name: POST RSS
+  type: http
+  seq: 4
+}
+
+post {
+  url: http://{{host}}/api/rss
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {"url": "http://test.org/rss"}
+}

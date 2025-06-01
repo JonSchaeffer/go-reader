@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "bruno-go-reader",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}
