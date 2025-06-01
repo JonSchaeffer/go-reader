@@ -5,11 +5,13 @@ meta {
 }
 
 get {
-  url: http://{{host_five}}/makefulltextfeed.php?url=[url]
+  url: http://{{host_five}}/makefulltextfeed.php?url=https://news.ycombinator.com/rss&max=1&links=preserve
   body: none
   auth: inherit
 }
 
 params:query {
-  url: [url]
+  url: https://news.ycombinator.com/rss
+  max: 1
+  links: preserve
 }

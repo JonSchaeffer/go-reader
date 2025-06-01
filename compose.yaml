@@ -1,8 +1,12 @@
 services:
   go-reader:
-    build: .
+    build: 
+      context: .
+      dockerfile: Dockerfile-dev
     ports:
       - "8080:8080"
+    volumes:
+      - ./:/app
   fullfeedrss:
       image: 'heussd/fivefilters-full-text-rss:latest'
       environment:

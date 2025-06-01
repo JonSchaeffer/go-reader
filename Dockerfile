@@ -1,6 +1,6 @@
 FROM golang:1.24.3-alpine3.22
 
-WORKDIR /src
+WORKDIR /app
 
 COPY main.go ./
 COPY go.mod ./

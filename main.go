@@ -10,6 +10,7 @@ package main
 
 import (
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"net/http"
 	"os"
@@ -26,10 +27,22 @@ type RSSData struct {
 	Entries []RSSEntry `json:"entries"`
 }
 
-const jsonFileName = "rss_urls.json"
+type RSSFeed struct {
+	Title       string `xml:"title"`
+	Link        string `xml:"link"`
+	Description string `xml:"description"`
+}
+
+const (
+	jsonFileName = "rss_urls.json"
+	jsonFeedName = "rss_feed.json"
+)
 
 func main() {
 	http.HandleFunc("/api/rss", routeRss)
+
+	testURL := getRSSFiveURL("https://news.ycombinator.com/rss")
+	fmt.Print(testURL)
 
 	fmt.Println("Server starting on :8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
@@ -263,4 +276,15 @@ func deleteRSSbyID(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Entry deleted successfully"))
 
 	}
+}
+
+func getRSSFiveURL(RSSUrl string) string {
+	return fmt.Sprintf("http://localhost:8081/makefulltextfeed.php?url=%s&max=1&links=preserve", RSSUrl)
+}
+
+func getRSSFeedXML(RSSUrl string) {
+}
+
+func saveRSSFeed(FeedURL string) {
+	xmlData, err := xml.Marshal()
 }
