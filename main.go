@@ -12,6 +12,8 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"io"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -27,10 +29,26 @@ type RSSData struct {
 	Entries []RSSEntry `json:"entries"`
 }
 
-type RSSFeed struct {
+type RSS struct {
+	XMLName xml.Name `xml:"rss"`
+	Channel Channel  `xml:"channel"`
+}
+
+type Channel struct {
 	Title       string `xml:"title"`
 	Link        string `xml:"link"`
 	Description string `xml:"description"`
+	Items       []Item `xml:"item"`
+}
+
+type Item struct {
+	Title       string `xml:"title"`
+	Link        string `xml:"link"`
+	GUID        string `xml:"guid"`
+	Description string `xml:"description"`
+	PubDate     string `xml:"pubdate"`
+	Format      string `xml:"dc:format"`
+	Identifier  string `xml:"dc:identifier"`
 }
 
 const (
@@ -41,8 +59,7 @@ const (
 func main() {
 	http.HandleFunc("/api/rss", routeRss)
 
-	testURL := getRSSFiveURL("https://news.ycombinator.com/rss")
-	fmt.Print(testURL)
+	saveRSSFeed(getRSSFiveURL("https://news.ycombinator.com/rss"))
 
 	fmt.Println("Server starting on :8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
@@ -65,7 +82,7 @@ func routeRss(w http.ResponseWriter, r *http.Request) {
 
 func getRss(w http.ResponseWriter, r *http.Request) {
 	// Load data from file
-	rssData, err := loadRSSData()
+	rssData, err := loadJSONFromFile[RSSData](jsonFileName)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error loading data: %v", err), http.StatusInternalServerError)
 		return
@@ -120,7 +137,7 @@ func postRss(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Load Existing Data
-	rssData, err := loadRSSData()
+	rssData, err := loadJSONFromFile[RSSData](jsonFileName)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error loading data: %v", err), http.StatusInternalServerError)
 		return
@@ -136,7 +153,7 @@ func postRss(w http.ResponseWriter, r *http.Request) {
 	rssData.Entries = append(rssData.Entries, newEntry)
 
 	// Save to file
-	if err := saveRSSData(rssData); err != nil {
+	if err := saveJSONToFile(rssData, jsonFileName); err != nil {
 		http.Error(w, fmt.Sprintf("Error saving data: %v", err), http.StatusInternalServerError)
 		return
 	}
@@ -151,28 +168,29 @@ func postRss(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-func loadRSSData() (*RSSData, error) {
-	// Check if file exists, if not return empty data
-	if _, err := os.Stat(jsonFileName); os.IsNotExist(err) {
-		return &RSSData{Entries: []RSSEntry{}}, nil
+func loadJSONFromFile[T any](fileName string) (T, error) {
+	var data T
+
+	// Check if file exists
+	if _, err := os.Stat(fileName); os.IsNotExist(err) {
+		return data, fmt.Errorf("file does not exist: %s", fileName)
 	}
 
 	// Read the file
-	data, err := os.ReadFile(jsonFileName)
+	fileBytes, err := os.ReadFile(fileName)
 	if err != nil {
-		return nil, fmt.Errorf("error reading the file: %v", err)
+		return data, fmt.Errorf("error reading file: %v", err)
 	}
 
-	// Parse JSON
-	var rssData RSSData
-	if err := json.Unmarshal(data, &rssData); err != nil {
-		return nil, fmt.Errorf("error parsing JSON: %v", err)
+	// Unmarshal into the generic type
+	if err := json.Unmarshal(fileBytes, &data); err != nil {
+		return data, fmt.Errorf("error parsing JSON: %v", err)
 	}
 
-	return &rssData, nil
+	return data, nil
 }
 
-func saveRSSData(data *RSSData) error {
+func saveJSONToFile[T any](data T, fileName string) error {
 	// Convert to JSON with indentation for readability
 	jsonData, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
@@ -180,7 +198,7 @@ func saveRSSData(data *RSSData) error {
 	}
 
 	// Write to file
-	if err := os.WriteFile(jsonFileName, jsonData, 0644); err != nil {
+	if err := os.WriteFile(fileName, jsonData, 0644); err != nil {
 		return fmt.Errorf("error writing file: %v", err)
 	}
 
@@ -230,7 +248,7 @@ func getRSSURLbyContains(entries []RSSEntry, url string) []RSSEntry {
 
 func deleteRSSbyID(w http.ResponseWriter, r *http.Request) {
 	// Load data from file
-	rssData, err := loadRSSData()
+	rssData, err := loadJSONFromFile[RSSData](jsonFileName)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error loadting data: %v", err), http.StatusInternalServerError)
 		return
@@ -266,7 +284,7 @@ func deleteRSSbyID(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		err = saveRSSData(rssData)
+		err = saveJSONToFile(rssData, jsonFileName)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Error saving data: %v", err), http.StatusInternalServerError)
 			return
@@ -279,12 +297,26 @@ func deleteRSSbyID(w http.ResponseWriter, r *http.Request) {
 }
 
 func getRSSFiveURL(RSSUrl string) string {
-	return fmt.Sprintf("http://localhost:8081/makefulltextfeed.php?url=%s&max=1&links=preserve", RSSUrl)
-}
-
-func getRSSFeedXML(RSSUrl string) {
+	return fmt.Sprintf("http://fullfeedrss:80/makefulltextfeed.php?url=%s&max=3&links=preserve", RSSUrl)
 }
 
 func saveRSSFeed(FeedURL string) {
-	xmlData, err := xml.Marshal()
+	response, err := http.Get(FeedURL)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if response.Body != nil {
+		defer response.Body.Close()
+	}
+
+	var rss RSS
+	err = xml.Unmarshal(body, &rss)
+	saveJSONToFile(rss, jsonFeedName)
+	fmt.Printf("%+v\n", rss.Channel.Items[0].Title)
 }
