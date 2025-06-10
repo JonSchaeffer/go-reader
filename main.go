@@ -153,34 +153,22 @@ func postRss(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Load Existing Data
-	rssData, err := loadJSONFromFile[RSSData](jsonFileName)
+	fiveURL := getRSSFiveURL(requestData.URL)
+
+	// Create DB Entry
+	rss, err := db.CreateRSS(requestData.URL, fiveURL, "Title", "description", 1, 1)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error loading data: %v", err), http.StatusInternalServerError)
-		return
+		log.Printf("Error creating RSS: %v", err)
 	}
 
-	// Create new entry
-	newEntry := RSSEntry{
-		ID:  getNextID(rssData.Entries),
-		URL: requestData.URL,
-	}
-
-	// Add to Entries
-	rssData.Entries = append(rssData.Entries, newEntry)
-
-	// Save to file
-	if err := saveJSONToFile(rssData, jsonFileName); err != nil {
-		http.Error(w, fmt.Sprintf("Error saving data: %v", err), http.StatusInternalServerError)
-		return
-	}
+	// test
 
 	// Return Success Response
 	w.Header().Set("Content-Type", "application/json")
 	response := map[string]interface{}{
 		"message": "RSS URL added successfully",
-		"id":      newEntry.ID,
-		"url":     newEntry.URL,
+		"id":      rss.ID,
+		"url":     rss.URL,
 	}
 	json.NewEncoder(w).Encode(response)
 }
