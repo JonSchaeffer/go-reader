@@ -18,6 +18,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/JonSchaeffer/go-reader/db"
 )
 
 type RSSEntry struct {
@@ -59,7 +61,22 @@ const (
 func main() {
 	http.HandleFunc("/api/rss", routeRss)
 
-	saveRSSFeed(getRSSFiveURL("https://news.ycombinator.com/rss"))
+	// saveRSSFeed(getRSSFiveURL("https://news.ycombinator.com/rss"))
+	err := db.Init("postgres://postgres:postgres@postgres:5432")
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = db.CreateRSSTable()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = db.CreateArticleTable()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer db.Close()
 
 	fmt.Println("Server starting on :8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
