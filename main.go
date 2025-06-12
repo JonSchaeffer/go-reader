@@ -50,11 +50,6 @@ type Item struct {
 	Identifier  string `xml:"dc:identifier"`
 }
 
-const (
-	jsonFileName = "rss_urls.json"
-	jsonFeedName = "rss_feed.json"
-)
-
 func main() {
 	http.HandleFunc("/api/rss", routeRss)
 
