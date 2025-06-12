@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"time"
 )
 
@@ -48,4 +49,60 @@ func CreateRSS(url, fiveURL, title, description string, feedSize, sync int) (*RS
 	)
 
 	return rss, err
+}
+
+func GetAllRSS() ([]RSS, error) {
+	query := `
+	SELECT id, url, fiveurl, title, description, feedSize, sync, created_at, updated_at 
+	FROM rss 
+	ORDER BY id`
+
+	rows, err := DB.Query(context.Background(), query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var rssFeeds []RSS
+	for rows.Next() {
+		var rss RSS
+		err := rows.Scan(&rss.ID, &rss.URL, &rss.FiveURL, &rss.Title, &rss.Description,
+			&rss.FeedSize, &rss.Sync, &rss.CreatedAt, &rss.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+		rssFeeds = append(rssFeeds, rss)
+	}
+	return rssFeeds, rows.Err()
+}
+
+func GetRSSByID(id int) (*RSS, error) {
+	query := `
+	SELECT id, url, fiveurl, title, description, feedSize, sync, created_at, updated_at
+	FROM rss
+	WHERE id = $1
+	`
+
+	rss := &RSS{}
+	err := DB.QueryRow(context.Background(), query, id).Scan(&rss.ID, &rss.URL, &rss.FiveURL,
+		&rss.Title, &rss.Description, &rss.FeedSize, &rss.Sync, &rss.CreatedAt, &rss.UpdatedAt)
+
+	return rss, err
+}
+
+func DeleteRSSByID(id int) error {
+	query := `
+	DELETE FROM rss WHERE id = $1
+	`
+
+	result, err := DB.Exec(context.Background(), query, id)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected := result.RowsAffected()
+	if rowsAffected == 0 {
+		return fmt.Errorf("RSS with ID %d not found", id)
+	}
+	return nil
 }

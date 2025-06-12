@@ -12,12 +12,9 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
-	"os"
 	"strconv"
-	"strings"
 
 	"github.com/JonSchaeffer/go-reader/db"
 )
@@ -98,10 +95,9 @@ func routeRss(w http.ResponseWriter, r *http.Request) {
 }
 
 func getRss(w http.ResponseWriter, r *http.Request) {
-	// Load data from file
-	rssData, err := loadJSONFromFile[RSSData](jsonFileName)
+	rss, err := db.GetAllRSS()
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error loading data: %v", err), http.StatusInternalServerError)
+		http.Error(w, "No data returned", http.StatusBadRequest)
 		return
 	}
 
@@ -115,25 +111,18 @@ func getRss(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		for _, entry := range rssData.Entries {
-			if entry.ID == id {
-				w.Header().Set("Content-Type", "application/json")
-				json.NewEncoder(w).Encode(entry)
-				return
-			}
+		rss, err := db.GetRSSByID(id)
+		if err != nil {
+			http.Error(w, "Invalid ID parameter", http.StatusBadRequest)
 		}
-
-		http.Error(w, "Entry not found", http.StatusNotFound)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(rss)
 		return
 	}
 
 	// Return all entries
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"message": "RSS URLs retrieved successfully",
-		"count":   len(rssData.Entries),
-		"entries": rssData.Entries,
-	})
+	json.NewEncoder(w).Encode(rss)
 }
 
 func postRss(w http.ResponseWriter, r *http.Request) {
@@ -161,8 +150,6 @@ func postRss(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error creating RSS: %v", err)
 	}
 
-	// test
-
 	// Return Success Response
 	w.Header().Set("Content-Type", "application/json")
 	response := map[string]interface{}{
@@ -173,92 +160,7 @@ func postRss(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-func loadJSONFromFile[T any](fileName string) (T, error) {
-	var data T
-
-	// Check if file exists
-	if _, err := os.Stat(fileName); os.IsNotExist(err) {
-		return data, fmt.Errorf("file does not exist: %s", fileName)
-	}
-
-	// Read the file
-	fileBytes, err := os.ReadFile(fileName)
-	if err != nil {
-		return data, fmt.Errorf("error reading file: %v", err)
-	}
-
-	// Unmarshal into the generic type
-	if err := json.Unmarshal(fileBytes, &data); err != nil {
-		return data, fmt.Errorf("error parsing JSON: %v", err)
-	}
-
-	return data, nil
-}
-
-func saveJSONToFile[T any](data T, fileName string) error {
-	// Convert to JSON with indentation for readability
-	jsonData, err := json.MarshalIndent(data, "", "  ")
-	if err != nil {
-		return fmt.Errorf("error marshaling JSON: %v", err)
-	}
-
-	// Write to file
-	if err := os.WriteFile(fileName, jsonData, 0644); err != nil {
-		return fmt.Errorf("error writing file: %v", err)
-	}
-
-	return nil
-}
-
-// TODO: Rewrite this fucntion to get the last entry, get the ID, the add 1.
-func getNextID(entries []RSSEntry) int {
-	maxID := 0
-	for _, entry := range entries {
-		if entry.ID > maxID {
-			maxID = entry.ID
-		}
-	}
-	return maxID + 1
-}
-
-func getRSSIDbyURL(entries []RSSEntry, url string) *RSSEntry {
-	for i := range entries {
-		if entries[i].URL == url {
-			return &entries[i]
-		}
-	}
-	return nil
-}
-
-func getRSSURLbyID(entries []RSSEntry, id int) *RSSEntry {
-	for i := range entries {
-		if entries[i].ID == id {
-			return &entries[i]
-		}
-	}
-	return nil
-}
-
-func getRSSURLbyContains(entries []RSSEntry, url string) []RSSEntry {
-	var results []RSSEntry
-	for _, entry := range entries {
-		if strings.Contains(strings.ToLower(entry.URL), strings.ToLower(url)) {
-			results = append(results, entry)
-		}
-	}
-	return results
-}
-
-// Load the RSS data, pop the relevant entry, write to file
-
 func deleteRSSbyID(w http.ResponseWriter, r *http.Request) {
-	// Load data from file
-	rssData, err := loadJSONFromFile[RSSData](jsonFileName)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error loadting data: %v", err), http.StatusInternalServerError)
-		return
-	}
-
 	// Check for ID paramater
 	idParam := r.URL.Query().Get("id")
 
@@ -275,23 +177,9 @@ func deleteRSSbyID(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		found := false
-		for i, entry := range rssData.Entries {
-			if entry.ID == id {
-				rssData.Entries = append(rssData.Entries[:i], rssData.Entries[i+1:]...)
-				found = true
-				break
-			}
-		}
-
-		if !found {
-			http.Error(w, "Entry not found", http.StatusNotFound)
-			return
-		}
-
-		err = saveJSONToFile(rssData, jsonFileName)
+		err = db.DeleteRSSByID(id)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Error saving data: %v", err), http.StatusInternalServerError)
+			http.Error(w, "Invalid ID parameter", http.StatusBadRequest)
 			return
 		}
 
@@ -303,25 +191,4 @@ func deleteRSSbyID(w http.ResponseWriter, r *http.Request) {
 
 func getRSSFiveURL(RSSUrl string) string {
 	return fmt.Sprintf("http://fullfeedrss:80/makefulltextfeed.php?url=%s&max=3&links=preserve", RSSUrl)
-}
-
-func saveRSSFeed(FeedURL string) {
-	response, err := http.Get(FeedURL)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	body, err := io.ReadAll(response.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if response.Body != nil {
-		defer response.Body.Close()
-	}
-
-	var rss RSS
-	err = xml.Unmarshal(body, &rss)
-	saveJSONToFile(rss, jsonFeedName)
-	fmt.Printf("%+v\n", rss.Channel.Items[0].Title)
 }
