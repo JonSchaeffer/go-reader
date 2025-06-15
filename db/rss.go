@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 )
 
 type RSS struct {
@@ -41,7 +43,8 @@ func CreateRSSTable() error {
 func CreateRSS(url, fiveURL, title, description string, feedSize, sync int) (*RSS, error) {
 	query := `
 	INSERT INTO rss (url, fiveURL, title, description, feedSize, sync) 
-	VALUES ($1, $2, $3, $4, $5, $6) 
+	VALUES ($1, $2, $3, $4, $5, $6)
+	ON CONFLICT (url) DO NOTHING
 	RETURNING id, url, fiveURL, title, description, feedSize, sync, created_at, updated_at`
 
 	rss := &RSS{}
@@ -49,6 +52,11 @@ func CreateRSS(url, fiveURL, title, description string, feedSize, sync int) (*RS
 		&rss.ID, &rss.URL, &rss.FiveURL, &rss.Title, &rss.Description, &rss.FeedSize, &rss.Sync,
 		&rss.CreatedAt, &rss.UpdatedAt,
 	)
+
+	if err == pgx.ErrNoRows {
+		// Article already existed and wasn't inserted
+		return nil, nil // or return a specific "already exists" indicator
+	}
 
 	return rss, err
 }

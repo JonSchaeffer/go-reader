@@ -3,6 +3,8 @@ package db
 import (
 	"context"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 )
 
 type Article struct {
@@ -53,11 +55,17 @@ func CreateArticle(rssID int, title, link, guid, description string, publishDate
 	query := `
 	INSERT INTO article (rssID, title, link, GUID, description, publishDate, format, identifier, read)
 	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	ON CONFLICT (rssID, link) DO NOTHING
 	RETURNING id, rssID, title, link, GUID, description, publishDate, format, identifier, read, created_at, updated_at
 	`
 	article := &Article{}
 	err := DB.QueryRow(context.Background(), query, rssID, title, link, guid, description, publishDate, format, identifier, read).Scan(
 		&article.ID, &article.RssID, &article.Title, &article.Link, &article.GUID, &article.Description, &article.PublishDate, &article.Format, &article.Identifier, &article.Read, &article.CreatedAt, &article.UpdatedAt,
 	)
+
+	if err == pgx.ErrNoRows {
+		// Article already existed and wasn't inserted
+		return nil, nil // or return a specific "already exists" indicator
+	}
 	return article, err
 }

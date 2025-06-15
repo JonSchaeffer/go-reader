@@ -9,13 +9,18 @@ package main
 // curl http://localhost:8080/api/rss?id=1
 
 import (
+	"context"
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
+	"time"
 
 	"github.com/JonSchaeffer/go-reader/db"
 )
@@ -52,12 +57,13 @@ type Item struct {
 }
 
 func main() {
-	http.HandleFunc("/api/rss", routeRss)
-
+	// Initialize database
 	err := db.Init("postgres://postgres:postgres@postgres:5432")
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer db.Close()
+
 	err = db.CreateRSSTable()
 	if err != nil {
 		log.Fatal(err)
@@ -68,11 +74,28 @@ func main() {
 		log.Fatal(err)
 	}
 
-	defer db.Close()
+	// Set up HTTP routes
+	http.HandleFunc("/api/rss", routeRss)
 
+	// Start RSS fetcher in background
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go startRSSFetcher(ctx)
+
+	// Handle shutdown signals in background
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sigChan
+		log.Println("Shutting down...")
+		cancel()
+		os.Exit(0)
+	}()
+
+	// Start HTTP server (this blocks)
 	fmt.Println("Server starting on :8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
-		fmt.Printf("Server failed to start: %v\n", err)
+		log.Printf("Server failed to start: %v", err)
 	}
 }
 
@@ -208,7 +231,7 @@ func deleteRSSbyID(w http.ResponseWriter, r *http.Request) {
 }
 
 func getRSSFiveURL(RSSUrl string) string {
-	return fmt.Sprintf("http://fullfeedrss:80/makefulltextfeed.php?url=%s&max=3&links=preserve", RSSUrl)
+	return fmt.Sprintf("http://fullfeedrss:80/makefulltextfeed.php?url=%s&max=4&links=preserve", RSSUrl)
 }
 
 func saveRSSFeed(FeedURL string, FeedID int) {
@@ -242,4 +265,54 @@ func saveRSSFeed(FeedURL string, FeedID int) {
 		}
 		fmt.Printf("%+v saved successfully.\n", item.Title)
 	}
+}
+
+func startRSSFetcher(ctx context.Context) {
+	ticker := time.NewTicker(5 * time.Minute)
+	defer ticker.Stop()
+
+	log.Println("RSS fetcher started")
+
+	// Run once immediately
+	fetchNewArticles()
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Println("RSS fetcher stopping...")
+			return
+		case <-ticker.C:
+			log.Println("Starting scheduled RSS fetch...")
+			fetchNewArticles()
+		}
+	}
+}
+
+func fetchNewArticles() {
+	log.Println("Starting to fetch new articles...")
+
+	rss, err := db.GetAllRSS()
+	if err != nil {
+		log.Printf("ERROR: Failed to get RSS feeds: %v", err)
+		return // Changed from log.Fatal to return
+	}
+
+	log.Printf("Processing %d RSS feeds", len(rss))
+
+	for i, item := range rss {
+		log.Printf("Processing feed %d/%d: %s", i+1, len(rss), item.FiveURL)
+
+		// Wrap in a function to catch panics
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("Recovered from panic processing RSS feed %s: %v", item.FiveURL, r)
+				}
+			}()
+
+			saveRSSFeed(item.FiveURL, item.ID)
+		}()
+	}
+
+	log.Println("Finished fetching articles")
 }
