@@ -122,7 +122,7 @@ func PostRss(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get RSS Feed, and save it to the DB
-	SaveRSSFeed(rss.FiveURL, rss.ID)
+	SaveRSSArticles(rss.FiveURL, rss.ID)
 
 	// Return Success Response
 	w.Header().Set("Content-Type", "application/json")
@@ -167,7 +167,7 @@ func GetRSSFiveURL(RSSUrl string) string {
 	return fmt.Sprintf("http://fullfeedrss:80/makefulltextfeed.php?url=%s&max=4&links=preserve", RSSUrl)
 }
 
-func SaveRSSFeed(FeedURL string, FeedID int) {
+func SaveRSSArticles(FeedURL string, FeedID int) {
 	response, err := http.Get(FeedURL)
 	if err != nil {
 		log.Fatal(err)
@@ -188,10 +188,16 @@ func SaveRSSFeed(FeedURL string, FeedID int) {
 		log.Fatal(err)
 	}
 
+	processor := NewContentProcessor()
+
 	for _, item := range rss.Channel.Items {
 		fmt.Printf("Data: %+v\n", item.Title)
+
+		// Process description
+		processedDescription := processor.ProcessContent(item.Description)
+
 		_, err := db.CreateArticle(FeedID, item.Title, item.Link,
-			item.GUID, item.Description, item.PubDate,
+			item.GUID, processedDescription, item.PubDate,
 			item.Format, item.Identifier, false)
 		if err != nil {
 			log.Fatal(err)
@@ -243,7 +249,7 @@ func FetchNewArticles() {
 				}
 			}()
 
-			SaveRSSFeed(item.FiveURL, item.ID)
+			SaveRSSArticles(item.FiveURL, item.ID)
 		}()
 	}
 
