@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 )
 
@@ -29,9 +30,10 @@ func CreateRSSTable() error {
 	feedSize INT,
 	sync INT,
 	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-	updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-	)`
+	updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
+	CONSTRAINT unique_rss_url UNIQUE (url)
+	)`
 	_, err := DB.Exec(context.Background(), query)
 	return err
 }
@@ -104,5 +106,14 @@ func DeleteRSSByID(id int) error {
 	if rowsAffected == 0 {
 		return fmt.Errorf("RSS with ID %d not found", id)
 	}
+
+	// Reset the sequence after successful deletion
+	resetQuery := `SELECT setval('rss_id_seq', COALESCE(MAX(id), 0) + 1, false) FROM rss`
+	_, err = DB.Exec(context.Background(), resetQuery)
+	if err != nil {
+		// Log the error but don't fail the function since the delete succeeded
+		log.Printf("Warning: failed to reset rss sequence: %v", err)
+	}
+
 	return nil
 }

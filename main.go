@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -45,15 +46,14 @@ type Item struct {
 	Link        string `xml:"link"`
 	GUID        string `xml:"guid"`
 	Description string `xml:"description"`
-	PubDate     string `xml:"pubdate"`
-	Format      string `xml:"dc:format"`
-	Identifier  string `xml:"dc:identifier"`
+	PubDate     string `xml:"pubDate"`
+	Format      string `xml:"format"`
+	Identifier  string `xml:"identifier"`
 }
 
 func main() {
 	http.HandleFunc("/api/rss", routeRss)
 
-	// saveRSSFeed(getRSSFiveURL("https://news.ycombinator.com/rss"))
 	err := db.Init("postgres://postgres:postgres@postgres:5432")
 	if err != nil {
 		log.Fatal(err)
@@ -139,11 +139,34 @@ func postRss(w http.ResponseWriter, r *http.Request) {
 
 	fiveURL := getRSSFiveURL(requestData.URL)
 
+	fiveResponse, err := http.Get(fiveURL)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	body, err := io.ReadAll(fiveResponse.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if fiveResponse.Body != nil {
+		defer fiveResponse.Body.Close()
+	}
+
+	var rssURL RSS
+	err = xml.Unmarshal(body, &rssURL)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// Create DB Entry
-	rss, err := db.CreateRSS(requestData.URL, fiveURL, "Title", "description", 1, 1)
+	rss, err := db.CreateRSS(requestData.URL, fiveURL, rssURL.Channel.Title, rssURL.Channel.Description, 1, 1)
 	if err != nil {
 		log.Printf("Error creating RSS: %v", err)
 	}
+
+	// Get RSS Feed, and save it to the DB
+	saveRSSFeed(rss.FiveURL, rss.ID)
 
 	// Return Success Response
 	w.Header().Set("Content-Type", "application/json")
@@ -186,4 +209,37 @@ func deleteRSSbyID(w http.ResponseWriter, r *http.Request) {
 
 func getRSSFiveURL(RSSUrl string) string {
 	return fmt.Sprintf("http://fullfeedrss:80/makefulltextfeed.php?url=%s&max=3&links=preserve", RSSUrl)
+}
+
+func saveRSSFeed(FeedURL string, FeedID int) {
+	response, err := http.Get(FeedURL)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if response.Body != nil {
+		defer response.Body.Close()
+	}
+
+	var rss RSS
+	err = xml.Unmarshal(body, &rss)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, item := range rss.Channel.Items {
+		fmt.Printf("Data: %+v\n", item.Title)
+		_, err := db.CreateArticle(FeedID, item.Title, item.Link,
+			item.GUID, item.Description, item.PubDate,
+			item.Format, item.Identifier, false)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("%+v saved successfully.\n", item.Title)
+	}
 }

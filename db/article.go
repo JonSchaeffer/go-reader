@@ -1,8 +1,24 @@
 package db
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
-type Article struct{}
+type Article struct {
+	ID          int
+	RssID       int
+	Title       string
+	Link        string
+	GUID        string
+	Description string
+	PublishDate string
+	Format      string
+	Identifier  string
+	Read        bool
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
 
 func CreateArticleTable() error {
 	query := `
@@ -11,9 +27,9 @@ func CreateArticleTable() error {
 	rssID INT NOT NULL,
 	title TEXT,
 	link TEXT,
-	GUID INT,
+	GUID TEXT,
 	description TEXT,
-	publishDate TIMESTAMP,
+	publishDate TEXT,
 	format TEXT,
 	identifier TEXT,
 	read BOOLEAN,
@@ -24,8 +40,24 @@ func CreateArticleTable() error {
 		FOREIGN KEY (rssID) 
 		REFERENCES rss(id) 
 		ON DELETE CASCADE 
-		ON UPDATE CASCADE
+		ON UPDATE CASCADE,
+
+	CONSTRAINT unique_article_rss_link UNIQUE (rssID, link)
 	)`
+
 	_, err := DB.Exec(context.Background(), query)
 	return err
+}
+
+func CreateArticle(rssID int, title, link, guid, description string, publishDate string, format, identifier string, read bool) (*Article, error) {
+	query := `
+	INSERT INTO article (rssID, title, link, GUID, description, publishDate, format, identifier, read)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	RETURNING id, rssID, title, link, GUID, description, publishDate, format, identifier, read, created_at, updated_at
+	`
+	article := &Article{}
+	err := DB.QueryRow(context.Background(), query, rssID, title, link, guid, description, publishDate, format, identifier, read).Scan(
+		&article.ID, &article.RssID, &article.Title, &article.Link, &article.GUID, &article.Description, &article.PublishDate, &article.Format, &article.Identifier, &article.Read, &article.CreatedAt, &article.UpdatedAt,
+	)
+	return article, err
 }
