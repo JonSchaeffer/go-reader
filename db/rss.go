@@ -125,3 +125,6 @@ func DeleteRSSByID(id int) error {
 
 	return nil
 }
+
+// TODO: Add UpdateRSS(id int, title, description string, sync int) function to update RSS feed metadata
+// TODO: Add GetRSSStats(id int) function to return article count, unread count, last updated timestamp

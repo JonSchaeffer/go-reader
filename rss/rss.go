@@ -76,7 +76,7 @@ func GetRss(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(rss)
 }
 
-func GetArticlesByID(w http.ResponseWriter, r *http.Request) {
+func GetArticlesByRSSID(w http.ResponseWriter, r *http.Request) {
 	idParam := r.URL.Query().Get("id")
 	limitParam := r.URL.Query().Get("limit")
 
@@ -103,13 +103,11 @@ func GetArticlesByID(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get article from database
-	article, err := db.GetArticleByID(id, limit)
+	article, err := db.GetArticleByRSSID(id, limit)
 	if err != nil {
 		http.Error(w, "Article not found", http.StatusNotFound)
 		return
 	}
-
-	// fmt.Print(article)
 
 	// Return article as JSON
 	w.Header().Set("Content-Type", "application/json")
@@ -140,12 +138,16 @@ func PostRss(w http.ResponseWriter, r *http.Request) {
 
 	fiveResponse, err := http.Get(fiveURL)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Error fetching RSS feed: %v", err)
+		http.Error(w, "Failed to fetch RSS feed", http.StatusInternalServerError)
+		return
 	}
 
 	body, err := io.ReadAll(fiveResponse.Body)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Error reading RSS response: %v", err)
+		http.Error(w, "Failed to read RSS feed", http.StatusInternalServerError)
+		return
 	}
 
 	if fiveResponse.Body != nil {
@@ -155,7 +157,9 @@ func PostRss(w http.ResponseWriter, r *http.Request) {
 	var rssURL RSS
 	err = xml.Unmarshal(body, &rssURL)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Error parsing RSS XML: %v", err)
+		http.Error(w, "Failed to parse RSS feed", http.StatusInternalServerError)
+		return
 	}
 
 	// Create DB Entry
@@ -213,12 +217,14 @@ func GetRSSFiveURL(RSSUrl string) string {
 func SaveRSSArticles(FeedURL string, FeedID int) {
 	response, err := http.Get(FeedURL)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Error fetching feed URL %s: %v", FeedURL, err)
+		return
 	}
 
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Error reading feed response from %s: %v", FeedURL, err)
+		return
 	}
 
 	if response.Body != nil {
@@ -228,7 +234,8 @@ func SaveRSSArticles(FeedURL string, FeedID int) {
 	var rss RSS
 	err = xml.Unmarshal(body, &rss)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Error parsing RSS XML from %s: %v", FeedURL, err)
+		return
 	}
 
 	processor := NewContentProcessor()
@@ -245,7 +252,8 @@ func SaveRSSArticles(FeedURL string, FeedID int) {
 			item.GUID, processedDescription, item.PubDate,
 			item.Format, item.Identifier, false)
 		if err != nil {
-			log.Fatal(err)
+			log.Printf("Error saving article '%s': %v", item.Title, err)
+			continue
 		}
 		fmt.Printf("%+v saved successfully.\n", item.Title)
 	}
@@ -300,3 +308,10 @@ func FetchNewArticles() {
 
 	log.Println("Finished fetching articles")
 }
+
+// TODO: Add GetSingleArticle(w http.ResponseWriter, r *http.Request) handler for individual article retrieval
+// TODO: Add UpdateArticleReadStatus(w http.ResponseWriter, r *http.Request) handler to mark articles as read/unread
+// TODO: Add GetAllArticles(w http.ResponseWriter, r *http.Request) handler for paginated article listing across all feeds
+// TODO: Add SearchArticles(w http.ResponseWriter, r *http.Request) handler for article search functionality
+// TODO: Add UpdateRSS(w http.ResponseWriter, r *http.Request) handler to update RSS feed settings
+// TODO: Add GetRSSStats(w http.ResponseWriter, r *http.Request) handler to return feed statistics

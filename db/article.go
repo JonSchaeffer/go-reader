@@ -70,7 +70,7 @@ func CreateArticle(rssID int, title, link, guid, description string, publishDate
 	return article, err
 }
 
-func GetArticleByID(id, limit int) ([]Article, error) {
+func GetArticleByRSSID(id, limit int) ([]Article, error) {
 	query := `
 	SELECT id, rssID, title, link, GUID, description, publishDate, format, identifier, read, created_at, updated_at
 	FROM article
@@ -98,3 +98,8 @@ func GetArticleByID(id, limit int) ([]Article, error) {
 	}
 	return articles, rows.Err()
 }
+
+// TODO: Add GetSingleArticle(id int) function for individual article lookup
+// TODO: Add UpdateArticleReadStatus(id int, read bool) function to mark articles as read/unread
+// TODO: Add GetAllArticles(page, limit int, unreadOnly bool) function for paginated article listing
+// TODO: Add SearchArticles(query string, limit int) function for full-text search
