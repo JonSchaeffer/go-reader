@@ -69,3 +69,32 @@ func CreateArticle(rssID int, title, link, guid, description string, publishDate
 	}
 	return article, err
 }
+
+func GetArticleByID(id, limit int) ([]Article, error) {
+	query := `
+	SELECT id, rssID, title, link, GUID, description, publishDate, format, identifier, read, created_at, updated_at
+	FROM article
+	WHERE rssid = $1
+	ORDER BY created_at DESC
+	LIMIT $2
+	`
+
+	rows, err := DB.Query(context.Background(), query, id, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var articles []Article
+	for rows.Next() {
+		var article Article
+		err := rows.Scan(&article.ID, &article.RssID, &article.Title, &article.Link,
+			&article.GUID, &article.Description, &article.PublishDate, &article.Format, &article.Identifier,
+			&article.Read, &article.CreatedAt, &article.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+		articles = append(articles, article)
+	}
+	return articles, rows.Err()
+}

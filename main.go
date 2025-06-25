@@ -44,6 +44,7 @@ func main() {
 
 	// Set up HTTP routes
 	http.HandleFunc("/api/rss", routeRss)
+	http.HandleFunc("/api/article", routeArticle)
 
 	// Start RSS fetcher in background
 	ctx, cancel := context.WithCancel(context.Background())
@@ -76,6 +77,15 @@ func routeRss(w http.ResponseWriter, r *http.Request) {
 		rss.PostRss(w, r)
 	case http.MethodDelete:
 		rss.DeleteRSSbyID(w, r)
+	default:
+		http.Error(w, "Method is not allowed or supported", http.StatusMethodNotAllowed)
+	}
+}
+
+func routeArticle(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		rss.GetArticlesByID(w, r)
 	default:
 		http.Error(w, "Method is not allowed or supported", http.StatusMethodNotAllowed)
 	}

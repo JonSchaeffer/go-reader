@@ -76,6 +76,49 @@ func GetRss(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(rss)
 }
 
+func GetArticlesByID(w http.ResponseWriter, r *http.Request) {
+	idParam := r.URL.Query().Get("id")
+	limitParam := r.URL.Query().Get("limit")
+
+	if idParam == "" {
+		http.Error(w, "ID parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	if limitParam == "" {
+		limitParam = "100"
+	}
+
+	// Convert ID parameter to integer
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		http.Error(w, "Invalid ID parameter", http.StatusBadRequest)
+		return
+	}
+
+	limit, err := strconv.Atoi(limitParam)
+	if err != nil {
+		http.Error(w, "Invalid limit parameter", http.StatusBadRequest)
+		return
+	}
+
+	// Get article from database
+	article, err := db.GetArticleByID(id, limit)
+	if err != nil {
+		http.Error(w, "Article not found", http.StatusNotFound)
+		return
+	}
+
+	// fmt.Print(article)
+
+	// Return article as JSON
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(article); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
+}
+
 func PostRss(w http.ResponseWriter, r *http.Request) {
 	// parse the request body
 	var requestData struct {
@@ -191,7 +234,9 @@ func SaveRSSArticles(FeedURL string, FeedID int) {
 	processor := NewContentProcessor()
 
 	for _, item := range rss.Channel.Items {
-		fmt.Printf("Data: %+v\n", item.Title)
+		// TODO: This approach isn't super efficient. It will process the description
+		// for every Rss Article even if it already exists. I think putting in a Check
+		// to compare GUID's first should help with this.
 
 		// Process description
 		processedDescription := processor.ProcessContent(item.Description)
