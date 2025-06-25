@@ -77,7 +77,7 @@ func GetRss(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetArticlesByRSSID(w http.ResponseWriter, r *http.Request) {
-	idParam := r.URL.Query().Get("id")
+	idParam := r.URL.Query().Get("rssid")
 	limitParam := r.URL.Query().Get("limit")
 
 	if idParam == "" {
@@ -104,6 +104,36 @@ func GetArticlesByRSSID(w http.ResponseWriter, r *http.Request) {
 
 	// Get article from database
 	article, err := db.GetArticleByRSSID(id, limit)
+	if err != nil {
+		http.Error(w, "Article not found", http.StatusNotFound)
+		return
+	}
+
+	// Return article as JSON
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(article); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
+}
+
+func GetSingleArticle(w http.ResponseWriter, r *http.Request) {
+	idParam := r.URL.Query().Get("id")
+
+	if idParam == "" {
+		http.Error(w, "ID parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	// Convert ID parameter to integer
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		http.Error(w, "Invalid ID parameter", http.StatusBadRequest)
+		return
+	}
+
+	// Get article from database
+	article, err := db.GetSingleArticle(id)
 	if err != nil {
 		http.Error(w, "Article not found", http.StatusNotFound)
 		return

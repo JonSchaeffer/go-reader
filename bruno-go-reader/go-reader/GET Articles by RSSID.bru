@@ -1,0 +1,15 @@
+meta {
+  name: GET Articles by RSSID
+  type: http
+  seq: 6
+}
+
+get {
+  url: http://{{host}}/api/article?id=2140
+  body: none
+  auth: inherit
+}
+
+params:query {
+  id: 2140
+}

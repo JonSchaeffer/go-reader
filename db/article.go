@@ -99,7 +99,33 @@ func GetArticleByRSSID(id, limit int) ([]Article, error) {
 	return articles, rows.Err()
 }
 
-// TODO: Add GetSingleArticle(id int) function for individual article lookup
+func GetSingleArticle(id int) ([]Article, error) {
+	query := `
+	SELECT id, rssID, title, link, GUID, description, publishDate, format, identifier, read, created_at, updated_at
+	FROM article
+	WHERE id = $1
+	`
+
+	rows, err := DB.Query(context.Background(), query, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var articles []Article
+	for rows.Next() {
+		var article Article
+		err := rows.Scan(&article.ID, &article.RssID, &article.Title, &article.Link,
+			&article.GUID, &article.Description, &article.PublishDate, &article.Format, &article.Identifier,
+			&article.Read, &article.CreatedAt, &article.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+		articles = append(articles, article)
+	}
+	return articles, rows.Err()
+}
+
 // TODO: Add UpdateArticleReadStatus(id int, read bool) function to mark articles as read/unread
 // TODO: Add GetAllArticles(page, limit int, unreadOnly bool) function for paginated article listing
 // TODO: Add SearchArticles(query string, limit int) function for full-text search

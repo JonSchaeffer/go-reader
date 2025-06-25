@@ -44,10 +44,8 @@ func main() {
 
 	// Set up HTTP routes
 	http.HandleFunc("/api/rss", routeRss)
-	http.HandleFunc("/api/article", routeArticle)
-
-	// TODO: Add individual article endpoint
-	// http.HandleFunc("/api/article/", routeSingleArticle)
+	http.HandleFunc("/api/articles", routeArticle)
+	http.HandleFunc("/api/article", routeSingleArticle)
 
 	// TODO: Add all articles endpoint with pagination
 	// http.HandleFunc("/api/articles", routeAllArticles)
@@ -104,16 +102,16 @@ func routeArticle(w http.ResponseWriter, r *http.Request) {
 }
 
 // TODO: Add route handler for individual articles
-// func routeSingleArticle(w http.ResponseWriter, r *http.Request) {
-//     switch r.Method {
-//     case http.MethodGet:
-//         rss.GetSingleArticle(w, r)
-//     case http.MethodPut:
-//         rss.UpdateArticleReadStatus(w, r)
-//     default:
-//         http.Error(w, "Method is not allowed or supported", http.StatusMethodNotAllowed)
-//     }
-// }
+func routeSingleArticle(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		rss.GetSingleArticle(w, r)
+	// case http.MethodPut:
+	// rss.UpdateArticleReadStatus(w, r)
+	default:
+		http.Error(w, "Method is not allowed or supported", http.StatusMethodNotAllowed)
+	}
+}
 
 // TODO: Add route handler for all articles with pagination
 // func routeAllArticles(w http.ResponseWriter, r *http.Request) {
