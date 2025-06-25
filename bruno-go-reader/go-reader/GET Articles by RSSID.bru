@@ -5,11 +5,12 @@ meta {
 }
 
 get {
-  url: http://{{host}}/api/article?id=2140
+  url: http://{{host}}/api/articles?rssid=1&limit=10
   body: none
   auth: inherit
 }
 
 params:query {
-  id: 2140
+  rssid: 1
+  limit: 10
 }
