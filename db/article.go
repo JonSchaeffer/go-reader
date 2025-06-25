@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -124,6 +125,26 @@ func GetSingleArticle(id int) ([]Article, error) {
 		articles = append(articles, article)
 	}
 	return articles, rows.Err()
+}
+
+func UpdateArticleReadStatus(id int, read bool) error {
+	query := `
+	UPDATE article
+	SET read = $1
+	WHERE id = $2
+	`
+
+	result, err := DB.Exec(context.Background(), query, read, id)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected := result.RowsAffected()
+	if rowsAffected == 0 {
+		return fmt.Errorf("RSS with ID %d not found", id)
+	}
+
+	return nil
 }
 
 // TODO: Add UpdateArticleReadStatus(id int, read bool) function to mark articles as read/unread

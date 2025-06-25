@@ -147,6 +147,49 @@ func GetSingleArticle(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func UpdateArticleReadStatus(w http.ResponseWriter, r *http.Request) {
+	// Take in the ID of an article
+	// Take in the status of the article bool. Read = true, unread = false
+	// Query would look like this api/article?id=1&read=true
+
+	// Call database function that would update the database entry
+
+	idParam := r.URL.Query().Get("id")
+	readParam := r.URL.Query().Get("read")
+
+	if idParam == "" {
+		http.Error(w, "ID parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	if readParam == "" {
+		http.Error(w, "Read parameter is required", http.StatusBadRequest)
+	}
+
+	// Convert ID parameter to integer
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		http.Error(w, "Invalid ID parameter", http.StatusBadRequest)
+		return
+	}
+
+	// Convert read parameter to boolean
+	read, err := strconv.ParseBool(readParam)
+	if err != nil {
+		http.Error(w, "Invalid read parameter", http.StatusBadRequest)
+		return
+	}
+
+	err = db.UpdateArticleReadStatus(id, read)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error updating read status for article %d", id), http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(fmt.Sprintf("Article %d read status set to %t", id, read)))
+}
+
 func PostRss(w http.ResponseWriter, r *http.Request) {
 	// parse the request body
 	var requestData struct {
@@ -339,7 +382,6 @@ func FetchNewArticles() {
 	log.Println("Finished fetching articles")
 }
 
-// TODO: Add GetSingleArticle(w http.ResponseWriter, r *http.Request) handler for individual article retrieval
 // TODO: Add UpdateArticleReadStatus(w http.ResponseWriter, r *http.Request) handler to mark articles as read/unread
 // TODO: Add GetAllArticles(w http.ResponseWriter, r *http.Request) handler for paginated article listing across all feeds
 // TODO: Add SearchArticles(w http.ResponseWriter, r *http.Request) handler for article search functionality

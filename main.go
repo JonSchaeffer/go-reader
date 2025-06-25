@@ -106,8 +106,8 @@ func routeSingleArticle(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		rss.GetSingleArticle(w, r)
-	// case http.MethodPut:
-	// rss.UpdateArticleReadStatus(w, r)
+	case http.MethodPut:
+		rss.UpdateArticleReadStatus(w, r)
 	default:
 		http.Error(w, "Method is not allowed or supported", http.StatusMethodNotAllowed)
 	}

@@ -1,0 +1,16 @@
+meta {
+  name: PUT Article Read Status
+  type: http
+  seq: 7
+}
+
+put {
+  url: http://{{host}}/api/articles?rssid=1&read=t
+  body: none
+  auth: inherit
+}
+
+params:query {
+  rssid: 1
+  read: t
+}
