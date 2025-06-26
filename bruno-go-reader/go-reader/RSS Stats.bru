@@ -1,0 +1,11 @@
+meta {
+  name: RSS Stats
+  type: http
+  seq: 11
+}
+
+get {
+  url: http://{{host}}/api/rss/stats
+  body: none
+  auth: inherit
+}

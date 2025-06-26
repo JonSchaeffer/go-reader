@@ -156,4 +156,70 @@ func UpdateRSS[T string | int](id int, param string, value T) error {
 	return nil
 }
 
-// TODO: Add GetRSSStats(id int) function to return article count, unread count, last updated timestamp
+type RSSStats struct {
+	FeedID            int       `json:"feed_id"`
+	TotalArticles     int       `json:"total_articles"`
+	UnreadArticles    int       `json:"unread_articles"`
+	ReadArticles      int       `json:"read_articles"`
+	OldestArticle     time.Time `json:"oldest_article"`
+	NewestArticle     time.Time `json:"newest_article"`
+	LastUpdated       time.Time `json:"last_updated"`
+	DaysSinceLastPost int       `json:"days_since_last_post"`
+}
+
+func GetRSSStats(id int) (*RSSStats, error) {
+	stats := &RSSStats{FeedID: id}
+	
+	// Get total article count
+	err := DB.QueryRow(context.Background(), 
+		"SELECT COUNT(*) FROM article WHERE rssid = $1", id).Scan(&stats.TotalArticles)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Get unread article count
+	err = DB.QueryRow(context.Background(), 
+		"SELECT COUNT(*) FROM article WHERE rssid = $1 AND read = false", id).Scan(&stats.UnreadArticles)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Calculate read articles
+	stats.ReadArticles = stats.TotalArticles - stats.UnreadArticles
+	
+	// Get oldest and newest article dates (return early if no articles)
+	if stats.TotalArticles > 0 {
+		err = DB.QueryRow(context.Background(), 
+			"SELECT MIN(created_at), MAX(created_at) FROM article WHERE rssid = $1", 
+			id).Scan(&stats.OldestArticle, &stats.NewestArticle)
+		if err != nil {
+			return nil, err
+		}
+		
+		// Get days since last post (using publishDate if available, otherwise created_at)
+		var lastPostDate time.Time
+		err = DB.QueryRow(context.Background(), `
+			SELECT COALESCE(MAX(
+				CASE 
+					WHEN publishdate != '' AND publishdate IS NOT NULL 
+					THEN publishdate::timestamp 
+					ELSE created_at 
+				END
+			), MIN(created_at))
+			FROM article WHERE rssid = $1`, id).Scan(&lastPostDate)
+		if err != nil {
+			return nil, err
+		}
+		
+		stats.DaysSinceLastPost = int(time.Since(lastPostDate).Hours() / 24)
+	}
+	
+	// Get RSS feed last updated time
+	err = DB.QueryRow(context.Background(), 
+		"SELECT updated_at FROM rss WHERE id = $1", id).Scan(&stats.LastUpdated)
+	if err != nil {
+		return nil, err
+	}
+	
+	return stats, nil
+}

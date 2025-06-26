@@ -41,6 +41,7 @@ func main() {
 
 	// Set up HTTP routes
 	http.HandleFunc("/api/rss", routeRss)
+	http.HandleFunc("/api/rss/stats", routeRSSStats)             // RSS feed statistics
 	http.HandleFunc("/api/articles", routeAllArticles)           // All articles
 	http.HandleFunc("/api/articles/single", routeSingleArticle)  // Single article by ?id=
 	http.HandleFunc("/api/articles/by-rss", routeArticlesByRSS)  // Articles by RSS ID
@@ -125,6 +126,15 @@ func routeSearchArticles(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		rss.SearchArticles(w, r)
+	default:
+		http.Error(w, "Method is not allowed or supported", http.StatusMethodNotAllowed)
+	}
+}
+
+func routeRSSStats(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		rss.GetRSSStats(w, r)
 	default:
 		http.Error(w, "Method is not allowed or supported", http.StatusMethodNotAllowed)
 	}
