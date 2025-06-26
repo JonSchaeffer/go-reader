@@ -147,6 +147,32 @@ func UpdateArticleReadStatus(id int, read bool) error {
 	return nil
 }
 
-// TODO: Add UpdateArticleReadStatus(id int, read bool) function to mark articles as read/unread
+func GetAllArticles() ([]Article, error) {
+	query := `
+	SELECT id, rssID, title, link, GUID, description, publishDate, format, identifier, read, created_at, updated_at
+	FROM article
+	ORDER BY created_at DESC
+	`
+
+	rows, err := DB.Query(context.Background(), query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var articles []Article
+	for rows.Next() {
+		var article Article
+		err := rows.Scan(&article.ID, &article.RssID, &article.Title, &article.Link,
+			&article.GUID, &article.Description, &article.PublishDate, &article.Format, &article.Identifier,
+			&article.Read, &article.CreatedAt, &article.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+		articles = append(articles, article)
+	}
+	return articles, rows.Err()
+}
+
 // TODO: Add GetAllArticles(page, limit int, unreadOnly bool) function for paginated article listing
 // TODO: Add SearchArticles(query string, limit int) function for full-text search

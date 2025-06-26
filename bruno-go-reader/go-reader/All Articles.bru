@@ -1,0 +1,15 @@
+meta {
+  name: All Articles
+  type: http
+  seq: 8
+}
+
+get {
+  url: http://{{host}}/api/articles/single?id=2140
+  body: none
+  auth: inherit
+}
+
+params:query {
+  id: 2140
+}

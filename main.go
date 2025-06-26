@@ -44,14 +44,11 @@ func main() {
 
 	// Set up HTTP routes
 	http.HandleFunc("/api/rss", routeRss)
-	http.HandleFunc("/api/articles", routeArticle)
-	http.HandleFunc("/api/article", routeSingleArticle)
-
-	// TODO: Add all articles endpoint with pagination
-	// http.HandleFunc("/api/articles", routeAllArticles)
-
-	// TODO: Add article search endpoint
-	// http.HandleFunc("/api/articles/search", routeSearchArticles)
+	http.HandleFunc("/api/articles", routeAllArticles)          // All articles
+	http.HandleFunc("/api/articles/single", routeSingleArticle) // Single article by ?id=
+	http.HandleFunc("/api/articles/by-rss", routeArticlesByRSS) // Articles by RSS ID
+	http.HandleFunc("/api/articles/update", routeUpdateArticle) // Update article read status
+	// http.HandleFunc("/api/articles/search", routeSearchArticles) // Search articles
 
 	// Start RSS fetcher in background
 	ctx, cancel := context.WithCancel(context.Background())
@@ -89,23 +86,35 @@ func routeRss(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func routeArticle(w http.ResponseWriter, r *http.Request) {
+func routeAllArticles(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		rss.GetArticlesByRSSID(w, r)
-	// TODO: Add PUT method for marking articles as read/unread
-	// case http.MethodPut:
-	//     rss.UpdateArticleReadStatus(w, r)
+		rss.GetAllArticles(w, r)
 	default:
 		http.Error(w, "Method is not allowed or supported", http.StatusMethodNotAllowed)
 	}
 }
 
-// TODO: Add route handler for individual articles
 func routeSingleArticle(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		rss.GetSingleArticle(w, r)
+	default:
+		http.Error(w, "Method is not allowed or supported", http.StatusMethodNotAllowed)
+	}
+}
+
+func routeArticlesByRSS(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		rss.GetArticlesByRSSID(w, r)
+	default:
+		http.Error(w, "Method is not allowed or supported", http.StatusMethodNotAllowed)
+	}
+}
+
+func routeUpdateArticle(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
 	case http.MethodPut:
 		rss.UpdateArticleReadStatus(w, r)
 	default:
@@ -113,14 +122,13 @@ func routeSingleArticle(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// TODO: Add route handler for all articles with pagination
-// func routeAllArticles(w http.ResponseWriter, r *http.Request) {
-//     switch r.Method {
-//     case http.MethodGet:
-//         rss.GetAllArticles(w, r)
-//     default:
-//         http.Error(w, "Method is not allowed or supported", http.StatusMethodNotAllowed)
-//     }
+// func routeSearchArticles(w http.ResponseWriter, r *http.Request) {
+// 	switch r.Method {
+// 	case http.MethodGet:
+// 		rss.SearchArticles(w, r)
+// 	default:
+// 		http.Error(w, "Method is not allowed or supported", http.StatusMethodNotAllowed)
+// 	}
 // }
 
 // TODO: Add route handler for article search

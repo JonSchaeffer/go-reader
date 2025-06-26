@@ -1,0 +1,16 @@
+meta {
+  name: Article Read Status
+  type: http
+  seq: 7
+}
+
+put {
+  url: http://{{host}}/api/articles/update?id=2140&read=t
+  body: none
+  auth: inherit
+}
+
+params:query {
+  id: 2140
+  read: t
+}

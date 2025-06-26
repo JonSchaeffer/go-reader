@@ -76,6 +76,22 @@ func GetRss(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(rss)
 }
 
+func GetAllArticles(w http.ResponseWriter, r *http.Request) {
+	// Get article from database
+	article, err := db.GetAllArticles()
+	if err != nil {
+		http.Error(w, "Article not found", http.StatusNotFound)
+		return
+	}
+
+	// Return article as JSON
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(article); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
+}
+
 func GetArticlesByRSSID(w http.ResponseWriter, r *http.Request) {
 	idParam := r.URL.Query().Get("rssid")
 	limitParam := r.URL.Query().Get("limit")
@@ -382,7 +398,6 @@ func FetchNewArticles() {
 	log.Println("Finished fetching articles")
 }
 
-// TODO: Add UpdateArticleReadStatus(w http.ResponseWriter, r *http.Request) handler to mark articles as read/unread
 // TODO: Add GetAllArticles(w http.ResponseWriter, r *http.Request) handler for paginated article listing across all feeds
 // TODO: Add SearchArticles(w http.ResponseWriter, r *http.Request) handler for article search functionality
 // TODO: Add UpdateRSS(w http.ResponseWriter, r *http.Request) handler to update RSS feed settings
