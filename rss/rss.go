@@ -197,12 +197,6 @@ func SearchArticles(w http.ResponseWriter, r *http.Request) {
 }
 
 func UpdateArticleReadStatus(w http.ResponseWriter, r *http.Request) {
-	// Take in the ID of an article
-	// Take in the status of the article bool. Read = true, unread = false
-	// Query would look like this api/article?id=1&read=true
-
-	// Call database function that would update the database entry
-
 	idParam := r.URL.Query().Get("id")
 	readParam := r.URL.Query().Get("read")
 
@@ -431,5 +425,81 @@ func FetchNewArticles() {
 	log.Println("Finished fetching articles")
 }
 
-// TODO: Add UpdateRSS(w http.ResponseWriter, r *http.Request) handler to update RSS feed settings
+func UpdateRSS(w http.ResponseWriter, r *http.Request) {
+	idParam := r.URL.Query().Get("id")
+	urlParam := r.URL.Query().Get("url")
+	feedSizeParam := r.URL.Query().Get("feedsize")
+	syncParam := r.URL.Query().Get("sync")
+
+	if idParam == "" {
+		http.Error(w, "ID parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	if urlParam == "" && feedSizeParam == "" && syncParam == "" {
+		http.Error(w, "At least one parameter (url, feedsize, sync) is required", http.StatusBadRequest)
+		return
+	}
+
+	// Convert ID parameter to integer
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		http.Error(w, "Invalid ID parameter", http.StatusBadRequest)
+		return
+	}
+
+	updatedFields := []string{}
+	updatedValues := map[string]interface{}{}
+
+	if urlParam != "" {
+		err := db.UpdateRSS(id, "url", urlParam)
+		if err != nil {
+			http.Error(w, "Error updating RSS URL", http.StatusBadRequest)
+			return
+		}
+		updatedFields = append(updatedFields, "url")
+		updatedValues["url"] = urlParam
+	}
+
+	if feedSizeParam != "" {
+		feedSize, err := strconv.Atoi(feedSizeParam)
+		if err != nil {
+			http.Error(w, "Invalid feed size parameter", http.StatusBadRequest)
+			return
+		}
+		err = db.UpdateRSS(id, "feedsize", feedSize)
+		if err != nil {
+			http.Error(w, "Error updating RSS feed size", http.StatusBadRequest)
+			return
+		}
+		updatedFields = append(updatedFields, "feedsize")
+		updatedValues["feedsize"] = feedSize
+	}
+
+	if syncParam != "" {
+		sync, err := strconv.Atoi(syncParam)
+		if err != nil {
+			http.Error(w, "Invalid sync parameter", http.StatusBadRequest)
+			return
+		}
+		err = db.UpdateRSS(id, "sync", sync)
+		if err != nil {
+			http.Error(w, "Error updating RSS feed sync", http.StatusBadRequest)
+			return
+		}
+		updatedFields = append(updatedFields, "sync")
+		updatedValues["sync"] = sync
+	}
+
+	// Send success response
+	w.Header().Set("Content-Type", "application/json")
+	response := map[string]any{
+		"message":        fmt.Sprintf("RSS feed %d updated successfully", id),
+		"id":             id,
+		"updated_fields": updatedFields,
+		"updated_values": updatedValues,
+	}
+	json.NewEncoder(w).Encode(response)
+}
+
 // TODO: Add GetRSSStats(w http.ResponseWriter, r *http.Request) handler to return feed statistics

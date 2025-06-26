@@ -8,9 +8,6 @@ package main
 // curl http://localhost:8080/api/rss
 // curl http://localhost:8080/api/rss?id=1
 
-// TODO: Before saving the description to the database, process the html into something
-// more readable :)
-
 import (
 	"context"
 	"fmt"
@@ -79,6 +76,8 @@ func routeRss(w http.ResponseWriter, r *http.Request) {
 		rss.GetRss(w, r)
 	case http.MethodPost:
 		rss.PostRss(w, r)
+	case http.MethodPut:
+		rss.UpdateRSS(w, r)
 	case http.MethodDelete:
 		rss.DeleteRSSbyID(w, r)
 	default:

@@ -126,5 +126,34 @@ func DeleteRSSByID(id int) error {
 	return nil
 }
 
-// TODO: Add UpdateRSS(id int, title, description string, sync int) function to update RSS feed metadata
+func UpdateRSS[T string | int](id int, param string, value T) error {
+	var query string
+
+	switch param {
+	case "url":
+		query = `UPDATE rss SET url = $1 WHERE id = $2`
+	case "feedsize":
+		query = `UPDATE rss SET feedsize = $1 WHERE id = $2`
+	case "sync":
+		query = `UPDATE rss SET sync = $1 WHERE id = $2`
+	case "title":
+		query = `UPDATE rss SET title = $1 WHERE id = $2`
+	case "description":
+		query = `UPDATE rss SET description = $1 WHERE id = $2`
+	default:
+		return fmt.Errorf("invalid parameter: %s", param)
+	}
+
+	result, err := DB.Exec(context.Background(), query, value, id)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected := result.RowsAffected()
+	if rowsAffected == 0 {
+		return fmt.Errorf("RSS with ID %d not found", id)
+	}
+	return nil
+}
+
 // TODO: Add GetRSSStats(id int) function to return article count, unread count, last updated timestamp
