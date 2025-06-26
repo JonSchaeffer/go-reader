@@ -44,11 +44,11 @@ func main() {
 
 	// Set up HTTP routes
 	http.HandleFunc("/api/rss", routeRss)
-	http.HandleFunc("/api/articles", routeAllArticles)          // All articles
-	http.HandleFunc("/api/articles/single", routeSingleArticle) // Single article by ?id=
-	http.HandleFunc("/api/articles/by-rss", routeArticlesByRSS) // Articles by RSS ID
-	http.HandleFunc("/api/articles/update", routeUpdateArticle) // Update article read status
-	// http.HandleFunc("/api/articles/search", routeSearchArticles) // Search articles
+	http.HandleFunc("/api/articles", routeAllArticles)           // All articles
+	http.HandleFunc("/api/articles/single", routeSingleArticle)  // Single article by ?id=
+	http.HandleFunc("/api/articles/by-rss", routeArticlesByRSS)  // Articles by RSS ID
+	http.HandleFunc("/api/articles/update", routeUpdateArticle)  // Update article read status
+	http.HandleFunc("/api/articles/search", routeSearchArticles) // Search articles
 
 	// Start RSS fetcher in background
 	ctx, cancel := context.WithCancel(context.Background())
@@ -122,21 +122,11 @@ func routeUpdateArticle(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// func routeSearchArticles(w http.ResponseWriter, r *http.Request) {
-// 	switch r.Method {
-// 	case http.MethodGet:
-// 		rss.SearchArticles(w, r)
-// 	default:
-// 		http.Error(w, "Method is not allowed or supported", http.StatusMethodNotAllowed)
-// 	}
-// }
-
-// TODO: Add route handler for article search
-// func routeSearchArticles(w http.ResponseWriter, r *http.Request) {
-//     switch r.Method {
-//     case http.MethodGet:
-//         rss.SearchArticles(w, r)
-//     default:
-//         http.Error(w, "Method is not allowed or supported", http.StatusMethodNotAllowed)
-//     }
-// }
+func routeSearchArticles(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		rss.SearchArticles(w, r)
+	default:
+		http.Error(w, "Method is not allowed or supported", http.StatusMethodNotAllowed)
+	}
+}

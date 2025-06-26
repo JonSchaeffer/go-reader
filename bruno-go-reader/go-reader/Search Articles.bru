@@ -1,0 +1,16 @@
+meta {
+  name: Search Articles
+  type: http
+  seq: 9
+}
+
+get {
+  url: http://{{host}}/api/articles/search?query=AGI WIth Claude Code&limit=20
+  body: none
+  auth: inherit
+}
+
+params:query {
+  query: AGI WIth Claude Code
+  limit: 20
+}

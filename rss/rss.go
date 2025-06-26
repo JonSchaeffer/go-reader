@@ -163,6 +163,39 @@ func GetSingleArticle(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func SearchArticles(w http.ResponseWriter, r *http.Request) {
+	queryParam := r.URL.Query().Get("query")
+	limitParam := r.URL.Query().Get("limit")
+
+	if queryParam == "" {
+		http.Error(w, "Query parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	if limitParam == "" {
+		limitParam = "20"
+	}
+
+	// Convert limit param to int
+	limit, err := strconv.Atoi(limitParam)
+	if err != nil {
+		http.Error(w, "Invalid limit parameter", http.StatusBadRequest)
+		return
+	}
+
+	article, err := db.SearchArticles(queryParam, limit)
+	if err != nil {
+		http.Error(w, "No search results found", http.StatusNotFound)
+		return
+	}
+	// Return article as JSON
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(article); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
+}
+
 func UpdateArticleReadStatus(w http.ResponseWriter, r *http.Request) {
 	// Take in the ID of an article
 	// Take in the status of the article bool. Read = true, unread = false
@@ -398,7 +431,5 @@ func FetchNewArticles() {
 	log.Println("Finished fetching articles")
 }
 
-// TODO: Add GetAllArticles(w http.ResponseWriter, r *http.Request) handler for paginated article listing across all feeds
-// TODO: Add SearchArticles(w http.ResponseWriter, r *http.Request) handler for article search functionality
 // TODO: Add UpdateRSS(w http.ResponseWriter, r *http.Request) handler to update RSS feed settings
 // TODO: Add GetRSSStats(w http.ResponseWriter, r *http.Request) handler to return feed statistics

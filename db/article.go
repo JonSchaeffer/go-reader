@@ -174,5 +174,31 @@ func GetAllArticles() ([]Article, error) {
 	return articles, rows.Err()
 }
 
-// TODO: Add GetAllArticles(page, limit int, unreadOnly bool) function for paginated article listing
-// TODO: Add SearchArticles(query string, limit int) function for full-text search
+func SearchArticles(query string, limit int) ([]Article, error) {
+	searchQuery := `
+	SELECT id, rssID, title, link, GUID, description, publishDate, format, identifier, read, created_at, updated_at
+	FROM article
+	WHERE to_tsvector('english', title || ' ' || description) @@ plainto_tsquery('english', $1)
+	ORDER BY created_at DESC
+	LIMIT $2
+	`
+
+	rows, err := DB.Query(context.Background(), searchQuery, query, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var articles []Article
+	for rows.Next() {
+		var article Article
+		err := rows.Scan(&article.ID, &article.RssID, &article.Title, &article.Link,
+			&article.GUID, &article.Description, &article.PublishDate, &article.Format, &article.Identifier,
+			&article.Read, &article.CreatedAt, &article.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+		articles = append(articles, article)
+	}
+	return articles, rows.Err()
+}
