@@ -1,0 +1,17 @@
+meta {
+  name: Update RSS
+  type: http
+  seq: 1
+}
+
+put {
+  url: http://{{host}}/api/rss?id=3&sync=1&feedsize=1
+  body: none
+  auth: inherit
+}
+
+params:query {
+  id: 3
+  sync: 1
+  feedsize: 1
+}

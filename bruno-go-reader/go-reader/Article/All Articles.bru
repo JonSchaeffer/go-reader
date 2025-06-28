@@ -1,0 +1,11 @@
+meta {
+  name: All Articles
+  type: http
+  seq: 5
+}
+
+get {
+  url: http://{{host}}/api/articles
+  body: none
+  auth: inherit
+}

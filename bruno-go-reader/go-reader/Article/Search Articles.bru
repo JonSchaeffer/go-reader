@@ -1,0 +1,16 @@
+meta {
+  name: Search Articles
+  type: http
+  seq: 5
+}
+
+get {
+  url: http://{{host}}/api/articles/search?query=Frogger&limit=20
+  body: none
+  auth: inherit
+}
+
+params:query {
+  query: Frogger
+  limit: 20
+}

@@ -1,0 +1,11 @@
+meta {
+  name: Delete Article By ID
+  type: http
+  seq: 7
+}
+
+delete {
+  url: http://{{host}}/api/articles/delete
+  body: none
+  auth: inherit
+}

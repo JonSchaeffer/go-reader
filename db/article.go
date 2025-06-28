@@ -202,3 +202,22 @@ func SearchArticles(query string, limit int) ([]Article, error) {
 	}
 	return articles, rows.Err()
 }
+
+func DeleteArticle(id int) error {
+	query := `
+	DELETE FROM article
+	WHERE id = $1
+	`
+
+	result, err := DB.Exec(context.Background(), query, id)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected := result.RowsAffected()
+	if rowsAffected == 0 {
+		return fmt.Errorf("article with ID %d not found", id)
+	}
+
+	return nil
+}

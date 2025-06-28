@@ -1,0 +1,15 @@
+meta {
+  name: RSS by ID
+  type: http
+  seq: 1
+}
+
+delete {
+  url: http://{{host}}/api/rss?id=1
+  body: none
+  auth: inherit
+}
+
+params:query {
+  id: 1
+}

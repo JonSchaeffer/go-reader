@@ -531,3 +531,29 @@ func GetRSSStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
+
+func DeleteArticle(w http.ResponseWriter, r *http.Request) {
+	idParam := r.URL.Query().Get("id")
+
+	if idParam == "" {
+		http.Error(w, "ID parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	// Convert ID parameter to integer
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		http.Error(w, "Invalid ID parameter", http.StatusBadRequest)
+		return
+	}
+
+	// Delete article from database
+	err = db.DeleteArticle(id)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error deleting article %d: %v", id, err), http.StatusNotFound)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(fmt.Sprintf("Article %d deleted successfully", id)))
+}
