@@ -1,6 +1,17 @@
 services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_BASE=http://localhost:8080/api
+    depends_on:
+      - go-reader
   go-reader:
-    build: 
+    build:
       context: .
       dockerfile: Dockerfile-dev
     ports:
@@ -8,14 +19,14 @@ services:
     volumes:
       - ./:/app
   fullfeedrss:
-      image: 'heussd/fivefilters-full-text-rss:latest'
-      environment:
-          # Leave empty to disable admin section
-          - FTR_ADMIN_PASSWORD=
-      volumes:
-          - 'rss-cache:/var/www/html/cache/rss'
-      ports:
-          - '8081:80'
+    image: "heussd/fivefilters-full-text-rss:latest"
+    environment:
+      # Leave empty to disable admin section
+      - FTR_ADMIN_PASSWORD=
+    volumes:
+      - "rss-cache:/var/www/html/cache/rss"
+    ports:
+      - "8081:80"
   postgres:
     image: postgres:17.5-alpine3.22
     restart: always
@@ -28,9 +39,8 @@ services:
     ports:
       - "5432:5432"
     volumes:
-        - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
 
-        
 volumes:
-    rss-cache:
-    postgres_data:
+  rss-cache:
+  postgres_data:

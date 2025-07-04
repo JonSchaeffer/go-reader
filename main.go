@@ -21,6 +21,25 @@ import (
 	"github.com/JonSchaeffer/go-reader/rss"
 )
 
+// CORS middleware to allow frontend access
+func corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Set CORS headers
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		// Handle preflight requests
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		// Call the next handler
+		next(w, r)
+	}
+}
+
 func main() {
 	// Initialize database
 	err := db.Init("postgres://postgres:postgres@postgres:5432")
@@ -39,15 +58,15 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Set up HTTP routes
-	http.HandleFunc("/api/rss", routeRss)
-	http.HandleFunc("/api/rss/stats", routeRSSStats)             // RSS feed statistics
-	http.HandleFunc("/api/articles", routeAllArticles)           // All articles
-	http.HandleFunc("/api/articles/single", routeSingleArticle)  // Single article by ?id=
-	http.HandleFunc("/api/articles/by-rss", routeArticlesByRSS)  // Articles by RSS ID
-	http.HandleFunc("/api/articles/update", routeUpdateArticle)  // Update article read status
-	http.HandleFunc("/api/articles/search", routeSearchArticles) // Search articles
-	http.HandleFunc("/api/articles/delete", routeDeleteArticle)  // Delete article by ?id=
+	// Set up HTTP routes with CORS middleware
+	http.HandleFunc("/api/rss", corsMiddleware(routeRss))
+	http.HandleFunc("/api/rss/stats", corsMiddleware(routeRSSStats))             // RSS feed statistics
+	http.HandleFunc("/api/articles", corsMiddleware(routeAllArticles))           // All articles
+	http.HandleFunc("/api/articles/single", corsMiddleware(routeSingleArticle))  // Single article by ?id=
+	http.HandleFunc("/api/articles/by-rss", corsMiddleware(routeArticlesByRSS))  // Articles by RSS ID
+	http.HandleFunc("/api/articles/update", corsMiddleware(routeUpdateArticle))  // Update article read status
+	http.HandleFunc("/api/articles/search", corsMiddleware(routeSearchArticles)) // Search articles
+	http.HandleFunc("/api/articles/delete", corsMiddleware(routeDeleteArticle))  // Delete article by ?id=
 
 	// Start RSS fetcher in background
 	ctx, cancel := context.WithCancel(context.Background())
