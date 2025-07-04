@@ -8,6 +8,32 @@
 	let feedId = null;
 	let searchTerm = '';
 
+	// Function to decode HTML entities
+	function decodeHtml(html) {
+		if (!html || typeof window === 'undefined') return html;
+		
+		const temp = document.createElement('div');
+		temp.innerHTML = html;
+		return temp.textContent || temp.innerText || html;
+	}
+
+	// Function to safely truncate HTML content
+	function truncateHtml(html, maxLength = 300) {
+		if (!html) return '';
+		
+		// If the HTML is short enough, return as-is
+		if (html.length <= maxLength) {
+			return html;
+		}
+		
+		// Truncate and add ellipsis
+		const truncated = html.substring(0, maxLength);
+		const lastSpace = truncated.lastIndexOf(' ');
+		const cutPoint = lastSpace > maxLength * 0.8 ? lastSpace : maxLength;
+		
+		return html.substring(0, cutPoint) + '...';
+	}
+
 	async function loadData() {
 		console.log('Loading articles data...');
 		try {
@@ -41,8 +67,8 @@
 	// Filter articles based on search term
 	$: filteredArticles = $articles.filter(article => 
 		!searchTerm || 
-		article.Title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-		article.Description?.toLowerCase().includes(searchTerm.toLowerCase())
+		decodeHtml(article.Title)?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+		decodeHtml(article.Description)?.toLowerCase().includes(searchTerm.toLowerCase())
 	);
 </script>
 
@@ -125,7 +151,7 @@
 						<div class="article-header">
 							<h3 class="article-title">
 								<a href={article.Link} target="_blank" rel="noopener noreferrer">
-									{article.Title || 'Untitled Article'}
+									{decodeHtml(article.Title) || 'Untitled Article'}
 								</a>
 							</h3>
 							<div class="article-meta">
@@ -140,8 +166,7 @@
 						
 						{#if article.Description}
 							<div class="article-description">
-								{@html article.Description.substring(0, 300)}
-								{#if article.Description.length > 300}...{/if}
+								{@html truncateHtml(article.Description, 300)}
 							</div>
 						{/if}
 						
@@ -311,6 +336,29 @@
 		line-height: 1.6;
 		margin-bottom: 1rem;
 		font-size: 0.875rem;
+		overflow: hidden;
+	}
+
+	/* Constrain all content in article descriptions */
+	.article-description :global(img) {
+		max-width: 100%;
+		height: auto;
+		border-radius: var(--radius);
+	}
+
+	.article-description :global(iframe),
+	.article-description :global(video),
+	.article-description :global(embed),
+	.article-description :global(object) {
+		max-width: 100%;
+		height: auto;
+	}
+
+	.article-description :global(table) {
+		max-width: 100%;
+		overflow-x: auto;
+		display: block;
+		white-space: nowrap;
 	}
 
 	.article-footer {

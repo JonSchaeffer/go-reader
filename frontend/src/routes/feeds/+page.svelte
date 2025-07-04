@@ -8,6 +8,15 @@
 	let newFeedUrl = '';
 	let searchTerm = '';
 
+	// Function to decode HTML entities
+	function decodeHtml(html) {
+		if (!html || typeof window === 'undefined') return html;
+		
+		const temp = document.createElement('div');
+		temp.innerHTML = html;
+		return temp.textContent || temp.innerText || html;
+	}
+
 	async function loadData() {
 		console.log('Loading feeds data...');
 		try {
@@ -63,7 +72,7 @@
 	// Filter feeds based on search term
 	$: filteredFeeds = $feeds.filter(feed => 
 		!searchTerm || 
-		feed.Title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+		decodeHtml(feed.Title)?.toLowerCase().includes(searchTerm.toLowerCase()) ||
 		feed.Url?.toLowerCase().includes(searchTerm.toLowerCase())
 	);
 </script>
@@ -519,7 +528,7 @@
 						<div class="feed-header">
 							<div class="feed-icon">📡</div>
 							<div class="feed-info">
-								<h4 class="feed-title">{feed.Title || 'Untitled Feed'}</h4>
+								<h4 class="feed-title">{decodeHtml(feed.Title) || 'Untitled Feed'}</h4>
 								<p class="feed-url">{feed.Url}</p>
 							</div>
 							<div class="feed-actions">
