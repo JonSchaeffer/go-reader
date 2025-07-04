@@ -1,14 +1,15 @@
 <script>
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
+	import { afterNavigate } from '$app/navigation';
 	import { ArticleService } from '$lib/services/articleService.js';
 	import { articles, loading, errors } from '$lib/stores.js';
 
 	let feedId = null;
 	let searchTerm = '';
 
-	onMount(async () => {
-		console.log('Articles page mounted, loading articles...');
+	async function loadData() {
+		console.log('Loading articles data...');
 		try {
 			// Check if we have a feed filter from URL params
 			feedId = $page.url.searchParams.get('feed');
@@ -19,29 +20,29 @@
 			} else {
 				await ArticleService.loadAllArticles();
 			}
-			console.log('Articles loaded successfully');
+			console.log('Articles loaded successfully, count:', $articles.length);
 		} catch (error) {
-			console.error('Failed to load articles on mount:', error);
-		}
-	});
-
-	// Reactive loading when page is accessed
-	$: if (typeof window !== 'undefined') {
-		if ($articles.length === 0 && !$loading.articles && !$errors.articles) {
-			console.log('Reactive articles loading triggered');
-			if (feedId) {
-				ArticleService.loadArticlesByFeed(feedId);
-			} else {
-				ArticleService.loadAllArticles();
-			}
+			console.error('Failed to load articles:', error);
 		}
 	}
+
+	onMount(() => {
+		console.log('Articles page mounted');
+		loadData();
+	});
+
+	afterNavigate(() => {
+		console.log('Navigated to articles page');
+		loadData();
+	});
+
+
 
 	// Filter articles based on search term
 	$: filteredArticles = $articles.filter(article => 
 		!searchTerm || 
-		article.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-		article.description?.toLowerCase().includes(searchTerm.toLowerCase())
+		article.Title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+		article.Description?.toLowerCase().includes(searchTerm.toLowerCase())
 	);
 </script>
 
@@ -119,17 +120,17 @@
 			</div>
 		{:else}
 			<div class="articles-list">
-				{#each filteredArticles as article (article.id)}
+				{#each filteredArticles as article (article.ID || article.id || article.GUID)}
 					<article class="article-card {article.Read ? 'read' : 'unread'}">
 						<div class="article-header">
 							<h3 class="article-title">
-								<a href={article.link} target="_blank" rel="noopener noreferrer">
-									{article.title || 'Untitled Article'}
+								<a href={article.Link} target="_blank" rel="noopener noreferrer">
+									{article.Title || 'Untitled Article'}
 								</a>
 							</h3>
 							<div class="article-meta">
 								<time class="article-date">
-									{new Date(article.pub_date).toLocaleDateString()}
+									{new Date(article.PubDate).toLocaleDateString()}
 								</time>
 								{#if !article.Read}
 									<span class="unread-badge">New</span>
@@ -137,15 +138,15 @@
 							</div>
 						</div>
 						
-						{#if article.description}
+						{#if article.Description}
 							<div class="article-description">
-								{@html article.description.substring(0, 300)}
-								{#if article.description.length > 300}...{/if}
+								{@html article.Description.substring(0, 300)}
+								{#if article.Description.length > 300}...{/if}
 							</div>
 						{/if}
 						
 						<div class="article-footer">
-							<a href={article.link} target="_blank" rel="noopener noreferrer" class="btn btn-primary">
+							<a href={article.Link} target="_blank" rel="noopener noreferrer" class="btn btn-primary">
 								Read Article ↗
 							</a>
 						</div>

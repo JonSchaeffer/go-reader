@@ -63,14 +63,15 @@
 		}
 	];
 
-	// Update active states based on current page
-	$: {
-		navItems.forEach(section => {
-			section.items.forEach(item => {
-				item.active = $page.url.pathname.startsWith(item.href) && item.href !== '/';
-			});
-		});
-	}
+	// Create computed nav items with active states
+	$: navItemsWithActive = navItems.map(section => ({
+		...section,
+		items: section.items.map(item => ({
+			...item,
+			active: $page.url.pathname.startsWith(item.href) && item.href !== '/'
+		}))
+	}));
+
 </script>
 
 <svelte:head>
@@ -114,7 +115,7 @@
 		</div>
 		
 		<nav class="sidebar-nav">
-			{#each navItems as section}
+			{#each navItemsWithActive as section}
 				<div class="nav-section">
 					<h3 class="nav-section-title">{section.section}</h3>
 					<ul class="nav-list">

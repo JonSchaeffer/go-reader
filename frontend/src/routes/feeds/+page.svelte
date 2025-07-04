@@ -1,5 +1,6 @@
 <script>
-	import { onMount } from 'svelte';
+	import { onMount, afterUpdate } from 'svelte';
+	import { afterNavigate } from '$app/navigation';
 	import { FeedService } from '$lib/services/feedService.js';
 	import { feeds, loading, errors } from '$lib/stores.js';
 
@@ -7,14 +8,24 @@
 	let newFeedUrl = '';
 	let searchTerm = '';
 
-	onMount(async () => {
-		console.log('Feeds page mounted, loading feeds...');
+	async function loadData() {
+		console.log('Loading feeds data...');
 		try {
 			await FeedService.loadFeeds();
-			console.log('Feeds loaded successfully');
+			console.log('Feeds loaded successfully, count:', $feeds.length);
 		} catch (error) {
-			console.error('Failed to load feeds on mount:', error);
+			console.error('Failed to load feeds:', error);
 		}
+	}
+
+	onMount(() => {
+		console.log('Feeds page mounted');
+		loadData();
+	});
+
+	afterNavigate(() => {
+		console.log('Navigated to feeds page');
+		loadData();
 	});
 
 	async function handleAddFeed() {
@@ -47,19 +58,13 @@
 		}
 	}
 
-	// Reactive loading when page is accessed
-	$: if (typeof window !== 'undefined') {
-		if ($feeds.length === 0 && !$loading.feeds && !$errors.feeds) {
-			console.log('Reactive feeds loading triggered');
-			FeedService.loadFeeds();
-		}
-	}
+
 
 	// Filter feeds based on search term
 	$: filteredFeeds = $feeds.filter(feed => 
 		!searchTerm || 
-		feed.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-		feed.url?.toLowerCase().includes(searchTerm.toLowerCase())
+		feed.Title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+		feed.Url?.toLowerCase().includes(searchTerm.toLowerCase())
 	);
 </script>
 
@@ -415,7 +420,7 @@
 <div class="content-body">
 	<!-- Add Feed Modal -->
 	{#if showAddFeed}
-		<div class="modal-overlay" on:click={() => showAddFeed = false} on:keydown={(e) => e.key === 'Escape' && (showAddFeed = false)} role="dialog" aria-modal="true">
+		<div class="modal-overlay" on:click={() => showAddFeed = false} on:keydown={(e) => e.key === 'Escape' && (showAddFeed = false)}>
 			<div class="modal" on:click|stopPropagation>
 				<div class="modal-header">
 					<h3>Add New RSS Feed</h3>
@@ -509,18 +514,18 @@
 					<button class="btn btn-secondary" on:click={() => searchTerm = ''}>Clear Search</button>
 				</div>
 			{:else}
-				{#each filteredFeeds as feed (feed.id)}
+				{#each filteredFeeds as feed (feed.ID || feed.id)}
 					<div class="feed-card">
 						<div class="feed-header">
 							<div class="feed-icon">📡</div>
 							<div class="feed-info">
-								<h4 class="feed-title">{feed.title || 'Untitled Feed'}</h4>
-								<p class="feed-url">{feed.url}</p>
+								<h4 class="feed-title">{feed.Title || 'Untitled Feed'}</h4>
+								<p class="feed-url">{feed.Url}</p>
 							</div>
 							<div class="feed-actions">
 								<button 
 									class="btn-ghost feed-action"
-									on:click={() => handleDeleteFeed(feed.id)}
+									on:click={() => handleDeleteFeed(feed.ID)}
 									disabled={$loading.deleting}
 									title="Delete Feed"
 								>
@@ -533,9 +538,9 @@
 							<div class="feed-stats">
 								<span class="stat">
 									<span class="stat-label">Added:</span>
-									<span class="stat-value">{new Date(feed.created_at).toLocaleDateString()}</span>
+									<span class="stat-value">{new Date(feed.CreatedAt).toLocaleDateString()}</span>
 								</span>
-								{#if feed.fivefilters_url}
+								{#if feed.FivefiltersUrl}
 									<span class="stat">
 										<span class="stat-label">Full-text:</span>
 										<span class="stat-value enabled">✓ Enabled</span>
@@ -545,10 +550,10 @@
 						</div>
 						
 						<div class="feed-footer">
-							<a href="/articles?feed={feed.id}" class="btn btn-secondary">
+							<a href="/articles?feed={feed.ID}" class="btn btn-secondary">
 								View Articles
 							</a>
-							<a href={feed.url} target="_blank" rel="noopener noreferrer" class="btn btn-secondary">
+							<a href={feed.Url} target="_blank" rel="noopener noreferrer" class="btn btn-secondary">
 								Original Feed ↗
 							</a>
 						</div>
