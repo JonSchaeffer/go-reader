@@ -17,6 +17,46 @@
 		return temp.textContent || temp.innerText || html;
 	}
 
+	// Function to format dates properly
+	function formatDate(dateString) {
+		if (!dateString) return 'No date';
+		
+		try {
+			// Handle different date formats
+			let date;
+			
+			// Try parsing as-is first
+			date = new Date(dateString);
+			
+			// If invalid, try parsing different formats
+			if (isNaN(date.getTime()) && typeof dateString === 'string') {
+				// Handle Go time format (RFC3339)
+				if (dateString.includes('T') && dateString.includes('Z')) {
+					date = new Date(dateString);
+				}
+				// Handle other common formats
+				else if (dateString.includes('-')) {
+					date = new Date(dateString.replace(' ', 'T'));
+				}
+			}
+			
+			// Check if date is valid
+			if (isNaN(date.getTime())) {
+				console.warn('Invalid date format:', dateString);
+				return 'Invalid date';
+			}
+			
+			return date.toLocaleDateString('en-US', {
+				year: 'numeric',
+				month: 'short',
+				day: 'numeric'
+			});
+		} catch (error) {
+			console.warn('Date parsing error:', error, dateString);
+			return 'Invalid date';
+		}
+	}
+
 	async function loadData() {
 		console.log('Loading feeds data...');
 		try {
@@ -547,7 +587,7 @@
 							<div class="feed-stats">
 								<span class="stat">
 									<span class="stat-label">Added:</span>
-									<span class="stat-value">{new Date(feed.CreatedAt).toLocaleDateString()}</span>
+									<span class="stat-value">{formatDate(feed.CreatedAt)}</span>
 								</span>
 								{#if feed.FivefiltersUrl}
 									<span class="stat">

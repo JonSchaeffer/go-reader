@@ -34,6 +34,46 @@
 		return html.substring(0, cutPoint) + '...';
 	}
 
+	// Function to format dates properly
+	function formatDate(dateString) {
+		if (!dateString) return 'No date';
+		
+		try {
+			// Handle different date formats
+			let date;
+			
+			// Try parsing as-is first
+			date = new Date(dateString);
+			
+			// If invalid, try parsing different formats
+			if (isNaN(date.getTime()) && typeof dateString === 'string') {
+				// Handle Go time format (RFC3339)
+				if (dateString.includes('T') && dateString.includes('Z')) {
+					date = new Date(dateString);
+				}
+				// Handle other common formats
+				else if (dateString.includes('-')) {
+					date = new Date(dateString.replace(' ', 'T'));
+				}
+			}
+			
+			// Check if date is valid
+			if (isNaN(date.getTime())) {
+				console.warn('Invalid date format:', dateString);
+				return 'Invalid date';
+			}
+			
+			return date.toLocaleDateString('en-US', {
+				year: 'numeric',
+				month: 'short',
+				day: 'numeric'
+			});
+		} catch (error) {
+			console.warn('Date parsing error:', error, dateString);
+			return 'Invalid date';
+		}
+	}
+
 	async function loadData() {
 		console.log('Loading articles data...');
 		try {
@@ -61,6 +101,7 @@
 		console.log('Navigated to articles page');
 		loadData();
 	});
+
 
 
 
@@ -150,13 +191,13 @@
 					<article class="article-card {article.Read ? 'read' : 'unread'}">
 						<div class="article-header">
 							<h3 class="article-title">
-								<a href={article.Link} target="_blank" rel="noopener noreferrer">
+								<a href="/articles/{article.ID}">
 									{decodeHtml(article.Title) || 'Untitled Article'}
 								</a>
 							</h3>
 							<div class="article-meta">
 								<time class="article-date">
-									{new Date(article.PubDate).toLocaleDateString()}
+									{formatDate(article.PublishDate)}
 								</time>
 								{#if !article.Read}
 									<span class="unread-badge">New</span>
@@ -171,8 +212,11 @@
 						{/if}
 						
 						<div class="article-footer">
-							<a href={article.Link} target="_blank" rel="noopener noreferrer" class="btn btn-primary">
-								Read Article ↗
+							<a href="/articles/{article.ID}" class="btn btn-primary">
+								Read Article
+							</a>
+							<a href={article.Link} target="_blank" rel="noopener noreferrer" class="btn btn-secondary">
+								Original Source ↗
 							</a>
 						</div>
 					</article>
@@ -363,6 +407,7 @@
 
 	.article-footer {
 		display: flex;
+		gap: 0.75rem;
 		justify-content: flex-end;
 	}
 
@@ -380,7 +425,7 @@
 		}
 
 		.article-footer {
-			justify-content: stretch;
+			flex-direction: column;
 		}
 
 		.article-footer .btn {
