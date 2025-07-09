@@ -10,16 +10,16 @@ import (
 )
 
 type RSS struct {
-	ID          int
-	URL         string
-	FiveURL     string
-	Title       string
-	Description string
-	FeedSize    int
-	Sync        int
-	CategoryID  *int   // Nullable foreign key to category
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID          int       `json:"ID"`
+	URL         string    `json:"Url"`
+	FiveURL     string    `json:"FivefiltersUrl"`
+	Title       string    `json:"Title"`
+	Description string    `json:"Description"`
+	FeedSize    int       `json:"FeedSize"`
+	Sync        int       `json:"Sync"`
+	CategoryID  *int      `json:"CategoryID"`
+	CreatedAt   time.Time `json:"CreatedAt"`
+	UpdatedAt   time.Time `json:"UpdatedAt"`
 }
 
 type Category struct {
@@ -81,6 +81,8 @@ func CreateRSSTable() error {
 }
 
 func AddCategoryIDColumn() error {
+	log.Println("Checking if categoryID column exists...")
+	
 	// Check if categoryID column exists
 	checkQuery := `
 	SELECT COUNT(*) 
@@ -90,8 +92,11 @@ func AddCategoryIDColumn() error {
 	var count int
 	err := DB.QueryRow(context.Background(), checkQuery).Scan(&count)
 	if err != nil {
+		log.Printf("Error checking for categoryID column: %v", err)
 		return err
 	}
+
+	log.Printf("CategoryID column check: found %d columns", count)
 
 	// If column doesn't exist, add it
 	if count == 0 {
@@ -101,8 +106,10 @@ func AddCategoryIDColumn() error {
 		alterQuery := `ALTER TABLE rss ADD COLUMN categoryID INT`
 		_, err = DB.Exec(context.Background(), alterQuery)
 		if err != nil {
+			log.Printf("Error adding categoryID column: %v", err)
 			return err
 		}
+		log.Println("CategoryID column added successfully")
 
 		// Add the foreign key constraint
 		constraintQuery := `
@@ -114,10 +121,13 @@ func AddCategoryIDColumn() error {
 			ON UPDATE CASCADE`
 		_, err = DB.Exec(context.Background(), constraintQuery)
 		if err != nil {
+			log.Printf("Error adding foreign key constraint: %v", err)
 			return err
 		}
 
 		log.Println("Successfully added categoryID column and constraint")
+	} else {
+		log.Println("CategoryID column already exists, skipping migration")
 	}
 
 	return nil
@@ -223,8 +233,6 @@ func UpdateRSS[T string | int](id int, param string, value T) error {
 		query = `UPDATE rss SET title = $1 WHERE id = $2`
 	case "description":
 		query = `UPDATE rss SET description = $1 WHERE id = $2`
-	case "categoryid":
-		query = `UPDATE rss SET categoryID = $1 WHERE id = $2`
 	default:
 		return fmt.Errorf("invalid parameter: %s", param)
 	}
@@ -238,6 +246,25 @@ func UpdateRSS[T string | int](id int, param string, value T) error {
 	if rowsAffected == 0 {
 		return fmt.Errorf("RSS with ID %d not found", id)
 	}
+	return nil
+}
+
+// Special function for updating categoryID that handles NULL values
+func UpdateRSSCategoryID(id int, categoryID *int) error {
+	query := `UPDATE rss SET categoryID = $1 WHERE id = $2`
+
+	result, err := DB.Exec(context.Background(), query, categoryID, id)
+	if err != nil {
+		log.Printf("Error updating categoryID for RSS %d: %v", id, err)
+		return err
+	}
+
+	rowsAffected := result.RowsAffected()
+	if rowsAffected == 0 {
+		return fmt.Errorf("RSS with ID %d not found", id)
+	}
+	
+	log.Printf("Successfully updated RSS %d categoryID to %v", id, categoryID)
 	return nil
 }
 

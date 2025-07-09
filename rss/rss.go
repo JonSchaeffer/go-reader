@@ -493,9 +493,9 @@ func UpdateRSS(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if categoryIDParam != "" {
-		if categoryIDParam == "null" || categoryIDParam == "" {
+		if categoryIDParam == "null" {
 			// Set to NULL for uncategorized
-			err = db.UpdateRSS(id, "categoryid", nil)
+			err = db.UpdateRSSCategoryID(id, nil)
 			if err != nil {
 				http.Error(w, "Error updating RSS feed category", http.StatusBadRequest)
 				return
@@ -508,7 +508,7 @@ func UpdateRSS(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Invalid category ID parameter", http.StatusBadRequest)
 				return
 			}
-			err = db.UpdateRSS(id, "categoryid", categoryID)
+			err = db.UpdateRSSCategoryID(id, &categoryID)
 			if err != nil {
 				http.Error(w, "Error updating RSS feed category", http.StatusBadRequest)
 				return

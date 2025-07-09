@@ -13,11 +13,11 @@
 	let collapsedCategories = new Set();
 
 	onMount(async () => {
-		// Load theme from localStorage
+		// Load theme from localStorage (theme should already be applied by app.html script)
 		if (browser) {
 			const savedTheme = localStorage.getItem('theme') || 'light';
 			theme = savedTheme;
-			document.documentElement.setAttribute('data-theme', theme);
+			// No need to set data-theme again, it's already set by app.html script
 			
 			// Load collapsed categories from localStorage
 			const collapsed = localStorage.getItem('collapsedCategories');
