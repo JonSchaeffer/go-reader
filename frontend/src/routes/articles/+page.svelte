@@ -3,7 +3,8 @@
 	import { page } from '$app/stores';
 	import { afterNavigate } from '$app/navigation';
 	import { ArticleService } from '$lib/services/articleService.js';
-	import { articles, loading, errors } from '$lib/stores.js';
+	import { FeedService } from '$lib/services/feedService.js';
+	import { articles, feeds, loading, errors } from '$lib/stores.js';
 
 	let feedId = null;
 	let searchTerm = '';
@@ -11,7 +12,7 @@
 	// Function to decode HTML entities
 	function decodeHtml(html) {
 		if (!html || typeof window === 'undefined') return html;
-		
+
 		const temp = document.createElement('div');
 		temp.innerHTML = html;
 		return temp.textContent || temp.innerText || html;
@@ -20,31 +21,31 @@
 	// Function to safely truncate HTML content
 	function truncateHtml(html, maxLength = 300) {
 		if (!html) return '';
-		
+
 		// If the HTML is short enough, return as-is
 		if (html.length <= maxLength) {
 			return html;
 		}
-		
+
 		// Truncate and add ellipsis
 		const truncated = html.substring(0, maxLength);
 		const lastSpace = truncated.lastIndexOf(' ');
 		const cutPoint = lastSpace > maxLength * 0.8 ? lastSpace : maxLength;
-		
+
 		return html.substring(0, cutPoint) + '...';
 	}
 
-	// Function to format dates properly
+	// Function to format dates properly with timestamp
 	function formatDate(dateString) {
 		if (!dateString) return 'No date';
-		
+
 		try {
 			// Handle different date formats
 			let date;
-			
+
 			// Try parsing as-is first
 			date = new Date(dateString);
-			
+
 			// If invalid, try parsing different formats
 			if (isNaN(date.getTime()) && typeof dateString === 'string') {
 				// Handle Go time format (RFC3339)
@@ -56,17 +57,19 @@
 					date = new Date(dateString.replace(' ', 'T'));
 				}
 			}
-			
+
 			// Check if date is valid
 			if (isNaN(date.getTime())) {
 				console.warn('Invalid date format:', dateString);
 				return 'Invalid date';
 			}
-			
+
 			return date.toLocaleDateString('en-US', {
 				year: 'numeric',
 				month: 'short',
-				day: 'numeric'
+				day: 'numeric',
+				hour: '2-digit',
+				minute: '2-digit'
 			});
 		} catch (error) {
 			console.warn('Date parsing error:', error, dateString);
@@ -80,7 +83,10 @@
 			// Check if we have a feed filter from URL params
 			feedId = $page.url.searchParams.get('feed');
 			console.log('Feed ID from URL:', feedId);
-			
+
+			// Load feeds data for feed names
+			await FeedService.loadFeeds();
+
 			if (feedId) {
 				await ArticleService.loadArticlesByFeed(feedId);
 			} else {
@@ -89,6 +95,46 @@
 			console.log('Articles loaded successfully, count:', $articles.length);
 		} catch (error) {
 			console.error('Failed to load articles:', error);
+		}
+	}
+
+	// Function to get feed name from RSS ID
+	function getFeedName(rssId) {
+		if (!rssId || !$feeds) return `Feed ${rssId}`;
+
+		const feed = $feeds.find((f) => f.ID === rssId);
+		if (feed && feed.Title) {
+			// Truncate feed name if too long
+			const title = decodeHtml(feed.Title);
+			return title.length > 20 ? title.substring(0, 17) + '...' : title;
+		}
+		return `Feed ${rssId}`;
+	}
+
+	async function toggleArticleReadStatus(article, event) {
+		// Prevent the row click from navigating to the article
+		event.stopPropagation();
+		event.preventDefault();
+
+		try {
+			const newStatus = await ArticleService.toggleReadStatus(article.ID, article.Read);
+
+			// Update the article in the local articles array
+			articles.update((currentArticles) =>
+				currentArticles.map((a) => (a.ID === article.ID ? { ...a, Read: newStatus } : a))
+			);
+		} catch (error) {
+			console.error('Failed to toggle read status:', error);
+		}
+	}
+
+	function openExternalLink(url, event) {
+		// Prevent the row click from navigating to the article
+		event.stopPropagation();
+		event.preventDefault();
+
+		if (url) {
+			window.open(url, '_blank', 'noopener,noreferrer');
 		}
 	}
 
@@ -102,14 +148,12 @@
 		loadData();
 	});
 
-
-
-
 	// Filter articles based on search term
-	$: filteredArticles = $articles.filter(article => 
-		!searchTerm || 
-		decodeHtml(article.Title)?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-		decodeHtml(article.Description)?.toLowerCase().includes(searchTerm.toLowerCase())
+	$: filteredArticles = $articles.filter(
+		(article) =>
+			!searchTerm ||
+			decodeHtml(article.Title)?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+			decodeHtml(article.Description)?.toLowerCase().includes(searchTerm.toLowerCase())
 	);
 </script>
 
@@ -138,14 +182,14 @@
 		<div class="search-bar">
 			<div class="search-input-wrapper">
 				<span class="search-icon">🔍</span>
-				<input 
-					type="text" 
+				<input
+					type="text"
 					bind:value={searchTerm}
 					placeholder="Search articles..."
 					class="search-input"
 				/>
 				{#if searchTerm}
-					<button class="btn-ghost search-clear" on:click={() => searchTerm = ''}>✕</button>
+					<button class="btn-ghost search-clear" on:click={() => (searchTerm = '')}>✕</button>
 				{/if}
 			</div>
 		</div>
@@ -158,71 +202,80 @@
 			<p>Loading articles...</p>
 		</div>
 
-	<!-- Error State -->
+		<!-- Error State -->
 	{:else if $errors.articles}
 		<div class="error-state">
 			<div class="error-icon">❌</div>
 			<h3>Failed to Load Articles</h3>
 			<p>{$errors.articles}</p>
-			<button class="btn btn-primary" on:click={() => ArticleService.loadAllArticles()}>Retry</button>
+			<button class="btn btn-primary" on:click={() => ArticleService.loadAllArticles()}
+				>Retry</button
+			>
 		</div>
 
-	<!-- Empty State -->
+		<!-- Empty State -->
 	{:else if $articles.length === 0}
 		<div class="empty-state">
 			<div class="empty-icon">📄</div>
 			<h3>No Articles Yet</h3>
 			<p>Add some RSS feeds to start seeing articles here.</p>
-			<a href="/feeds" class="btn btn-primary">
-				➕ Add RSS Feeds
-			</a>
+			<a href="/feeds" class="btn btn-primary"> ➕ Add RSS Feeds </a>
 		</div>
 
-	<!-- Articles List -->
+		<!-- Articles List -->
+	{:else if filteredArticles.length === 0}
+		<div class="no-results">
+			<p>No articles match your search for "{searchTerm}"</p>
+			<button class="btn btn-secondary" on:click={() => (searchTerm = '')}>Clear Search</button>
+		</div>
 	{:else}
-		{#if filteredArticles.length === 0}
-			<div class="no-results">
-				<p>No articles match your search for "{searchTerm}"</p>
-				<button class="btn btn-secondary" on:click={() => searchTerm = ''}>Clear Search</button>
-			</div>
-		{:else}
-			<div class="articles-list">
-				{#each filteredArticles as article (article.ID || article.id || article.GUID)}
-					<article class="article-card {article.Read ? 'read' : 'unread'}">
-						<div class="article-header">
-							<h3 class="article-title">
-								<a href="/articles/{article.ID}">
-									{decodeHtml(article.Title) || 'Untitled Article'}
-								</a>
-							</h3>
-							<div class="article-meta">
-								<time class="article-date">
-									{formatDate(article.PublishDate)}
-								</time>
-								{#if !article.Read}
-									<span class="unread-badge">New</span>
-								{/if}
-							</div>
-						</div>
-						
-						{#if article.Description}
-							<div class="article-description">
-								{@html truncateHtml(article.Description, 300)}
-							</div>
+		<div class="articles-list">
+			{#each filteredArticles as article (article.ID || article.id || article.GUID)}
+				<article
+					class="article-row {article.Read ? 'read' : 'unread'}"
+					on:click={() => (window.location.href = `/articles/${article.ID}`)}
+				>
+					<!-- Read/Unread Status Icon (clickable) -->
+					<button
+						class="status-icon"
+						on:click={(e) => toggleArticleReadStatus(article, e)}
+						title={article.Read ? 'Mark as unread' : 'Mark as read'}
+					>
+						{#if article.Read}
+							<span class="read-icon">📖</span>
+						{:else}
+							<span class="unread-icon">📕</span>
 						{/if}
-						
-						<div class="article-footer">
-							<a href="/articles/{article.ID}" class="btn btn-primary">
-								Read Article
-							</a>
-							<a href={article.Link} target="_blank" rel="noopener noreferrer" class="btn btn-secondary">
-								Original Source ↗
-							</a>
-						</div>
-					</article>
-				{/each}
-			</div>
-		{/if}
+					</button>
+
+					<!-- Feed Source -->
+					<div class="feed-source">
+						{getFeedName(article.RssID)}
+					</div>
+
+					<!-- Article Title -->
+					<div class="article-title">
+						<span class="title-text">
+							{decodeHtml(article.Title) || 'Untitled Article'}
+						</span>
+					</div>
+
+					<!-- Date with timestamp -->
+					<div class="article-date">
+						{formatDate(article.PublishDate)}
+					</div>
+
+					<!-- External Link Icon -->
+					<button
+						class="external-link"
+						on:click={(e) => openExternalLink(article.Link, e)}
+						title="Open original article"
+					>
+						🔗
+					</button>
+				</article>
+			{/each}
+		</div>
 	{/if}
 </div>
 
@@ -303,133 +356,158 @@
 	.articles-list {
 		display: flex;
 		flex-direction: column;
-		gap: 1rem;
-	}
-
-	.article-card {
-		background: var(--bg-secondary);
+		gap: 0;
 		border: 1px solid var(--border);
-		border-radius: var(--radius-lg);
-		padding: 1.5rem;
+		border-radius: var(--radius);
+		overflow: hidden;
+		background: var(--bg-secondary);
+	}
+
+	.article-row {
+		display: flex;
+		align-items: center;
+		padding: 0.75rem 1rem;
+		border-bottom: 1px solid var(--border-light);
 		transition: all 0.15s ease;
-	}
-
-	.article-card:hover {
-		border-color: var(--primary);
-		box-shadow: var(--shadow);
-	}
-
-	.article-card.unread {
-		border-left: 4px solid var(--primary);
-	}
-
-	.article-card.read {
-		opacity: 0.7;
-	}
-
-	.article-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-start;
 		gap: 1rem;
-		margin-bottom: 1rem;
+		min-height: 3rem;
+		cursor: pointer;
 	}
 
-	.article-title {
-		flex: 1;
-		margin: 0;
-		font-size: 1.125rem;
-		font-weight: 600;
-		line-height: 1.4;
+	.article-row:last-child {
+		border-bottom: none;
 	}
 
-	.article-title a {
-		color: var(--text-primary);
-		text-decoration: none;
-		transition: color 0.15s ease;
+	.article-row:hover {
+		background: var(--bg-tertiary);
 	}
 
-	.article-title a:hover {
-		color: var(--primary);
+	.article-row.read {
+		opacity: 0.75;
 	}
 
-	.article-meta {
-		display: flex;
-		flex-direction: column;
-		align-items: flex-end;
-		gap: 0.5rem;
+	/* Status Icon */
+	.status-icon {
+		font-size: 1rem;
+		width: 1.5rem;
 		flex-shrink: 0;
+		text-align: center;
+		background: none;
+		border: none;
+		cursor: pointer;
+		padding: 0;
+		transition: transform 0.15s ease;
+		border-radius: 4px;
 	}
 
-	.article-date {
+	.status-icon:hover {
+		transform: scale(1.1);
+		background: var(--bg-primary);
+	}
+
+	.read-icon {
+		opacity: 0.6;
+	}
+
+	.unread-icon {
+		/* Keep normal opacity for unread items */
+	}
+
+	/* Feed Source */
+	.feed-source {
 		font-size: 0.75rem;
 		color: var(--text-tertiary);
-	}
-
-	.unread-badge {
-		background: var(--primary);
-		color: white;
-		font-size: 0.75rem;
-		padding: 0.125rem 0.5rem;
-		border-radius: 10px;
+		background: var(--bg-primary);
+		padding: 0.25rem 0.5rem;
+		border-radius: 12px;
+		white-space: nowrap;
+		flex-shrink: 0;
+		min-width: 4rem;
+		text-align: center;
 		font-weight: 500;
 	}
 
-	.article-description {
-		color: var(--text-secondary);
-		line-height: 1.6;
-		margin-bottom: 1rem;
+	/* Article Title */
+	.article-title {
+		flex: 1;
+		min-width: 0; /* Allow flex item to shrink */
+	}
+
+	.title-text {
+		color: var(--text-primary);
 		font-size: 0.875rem;
-		overflow: hidden;
-	}
-
-	/* Constrain all content in article descriptions */
-	.article-description :global(img) {
-		max-width: 100%;
-		height: auto;
-		border-radius: var(--radius);
-	}
-
-	.article-description :global(iframe),
-	.article-description :global(video),
-	.article-description :global(embed),
-	.article-description :global(object) {
-		max-width: 100%;
-		height: auto;
-	}
-
-	.article-description :global(table) {
-		max-width: 100%;
-		overflow-x: auto;
+		font-weight: 500;
+		line-height: 1.4;
 		display: block;
+		overflow: hidden;
+		text-overflow: ellipsis;
 		white-space: nowrap;
 	}
 
-	.article-footer {
+	/* External Link */
+	.external-link {
+		background: none;
+		border: none;
+		font-size: 0.875rem;
+		cursor: pointer;
+		padding: 0.25rem;
+		transition: all 0.15s ease;
+		border-radius: 4px;
+		color: var(--text-tertiary);
+		flex-shrink: 0;
+		width: 1.5rem;
+		height: 1.5rem;
 		display: flex;
-		gap: 0.75rem;
-		justify-content: flex-end;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.external-link:hover {
+		background: var(--bg-primary);
+		color: var(--primary);
+		transform: scale(1.1);
+	}
+
+	/* Article Date */
+	.article-date {
+		font-size: 0.75rem;
+		color: var(--text-tertiary);
+		white-space: nowrap;
+		flex-shrink: 0;
+		min-width: 7rem;
+		text-align: right;
 	}
 
 	/* Responsive */
 	@media (max-width: 768px) {
-		.article-header {
-			flex-direction: column;
-			align-items: stretch;
+		.article-row {
+			padding: 0.5rem 0.75rem;
+			gap: 0.75rem;
 		}
 
-		.article-meta {
-			flex-direction: row;
-			justify-content: space-between;
-			align-items: center;
+		.feed-source {
+			display: none; /* Hide feed source on mobile to save space */
 		}
 
-		.article-footer {
-			flex-direction: column;
+		.title-text {
+			font-size: 0.8125rem;
 		}
 
-		.article-footer .btn {
-			width: 100%;
+		.external-link {
+			font-size: 0.75rem;
+			width: 1.25rem;
+			height: 1.25rem;
+		}
+
+		.article-date {
+			font-size: 0.6875rem;
+			min-width: 5rem;
+		}
+
+		.status-icon {
+			font-size: 0.875rem;
+			width: 1.25rem;
 		}
 	}
 </style>
+

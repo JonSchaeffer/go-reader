@@ -27,8 +27,24 @@
 		
 		try {
 			article = await ArticleService.getArticleById(articleId);
+			
+			// Auto-mark as read when article is opened
+			if (article && !article.Read) {
+				await markAsRead();
+			}
 		} catch (error) {
 			console.error('Failed to load article:', error);
+		}
+	}
+
+	async function markAsRead() {
+		if (!article || article.Read) return;
+		
+		try {
+			const newStatus = await ArticleService.toggleReadStatus(article.ID, article.Read);
+			article.Read = newStatus;
+		} catch (error) {
+			console.error('Failed to mark as read:', error);
 		}
 	}
 
@@ -109,7 +125,7 @@
 					on:click={toggleReadStatus}
 					disabled={$loading.articles}
 				>
-					{article.Read ? '👁️ Mark Unread' : '✓ Mark Read'}
+					{article.Read ? '📕 Mark Unread' : '📖 Mark Read'}
 				</button>
 				
 				<a 
