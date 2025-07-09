@@ -17,13 +17,25 @@
 		if (browser) {
 			const savedTheme = localStorage.getItem('theme') || 'light';
 			theme = savedTheme;
-			// No need to set data-theme again, it's already set by app.html script
+			// Ensure theme is properly applied even if app.html script failed
+			document.documentElement.setAttribute('data-theme', savedTheme);
 			
 			// Load collapsed categories from localStorage
 			const collapsed = localStorage.getItem('collapsedCategories');
 			if (collapsed) {
 				collapsedCategories = new Set(JSON.parse(collapsed));
 			}
+
+			// Re-apply theme when page becomes visible (handles navigation edge cases)
+			document.addEventListener('visibilitychange', () => {
+				if (!document.hidden) {
+					const currentTheme = localStorage.getItem('theme') || 'light';
+					if (currentTheme !== theme) {
+						theme = currentTheme;
+					}
+					document.documentElement.setAttribute('data-theme', theme);
+				}
+			});
 		}
 
 		// Load feeds and categories data
@@ -36,6 +48,11 @@
 			console.error('Failed to load sidebar data:', error);
 		}
 	});
+
+	// Re-apply theme whenever the component updates (e.g., after navigation)
+	$: if (browser && theme) {
+		document.documentElement.setAttribute('data-theme', theme);
+	}
 
 	function toggleTheme() {
 		theme = theme === 'light' ? 'dark' : 'light';
