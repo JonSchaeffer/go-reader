@@ -7,6 +7,8 @@
 
 	let article = null;
 	let articleId = null;
+	let isLoading = true;
+	let loadError = null;
 
 	// Function to decode HTML entities
 	function decodeHtml(html) {
@@ -25,6 +27,9 @@
 	async function loadArticle() {
 		if (!articleId) return;
 		
+		isLoading = true;
+		loadError = null;
+		
 		try {
 			article = await ArticleService.getArticleById(articleId);
 			
@@ -34,6 +39,9 @@
 			}
 		} catch (error) {
 			console.error('Failed to load article:', error);
+			loadError = error.message || 'Failed to load article';
+		} finally {
+			isLoading = false;
 		}
 	}
 
@@ -142,19 +150,12 @@
 
 	<!-- Main Scrollable Content -->
 	<div class="main-content">
-		<!-- Loading State -->
-		{#if $loading.articles && !article}
-			<div class="loading-state">
-				<div class="loading-spinner">⏳</div>
-				<p>Loading article...</p>
-			</div>
-
 		<!-- Error State -->
-		{:else if $errors.articles && !article}
+		{#if loadError}
 			<div class="error-state">
 				<div class="error-icon">❌</div>
 				<h2>Failed to Load Article</h2>
-				<p>{$errors.articles}</p>
+				<p>{loadError}</p>
 				<button class="btn btn-primary" on:click={loadArticle}>Retry</button>
 			</div>
 
@@ -197,8 +198,8 @@
 				</div>
 			</article>
 
-		<!-- Article Not Found -->
-		{:else}
+		<!-- Article Not Found (only show after loading is complete and no article found) -->
+		{:else if !isLoading}
 			<div class="error-state">
 				<div class="error-icon">📄</div>
 				<h2>Article Not Found</h2>

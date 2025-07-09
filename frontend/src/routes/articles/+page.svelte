@@ -11,6 +11,7 @@
 	let readFilter = 'all'; // 'all', 'unread', 'read'
 	let refreshInterval = null;
 	let isRefreshing = false;
+	let hasAttemptedLoad = false;
 
 	// Function to decode HTML entities
 	function decodeHtml(html) {
@@ -82,6 +83,7 @@
 
 	async function loadData() {
 		console.log('Loading articles data...');
+		hasAttemptedLoad = true;
 		try {
 			// Check if we have a feed filter from URL params
 			feedId = $page.url.searchParams.get('feed');
@@ -221,9 +223,14 @@
 		stopAutoRefresh();
 	});
 
-	afterNavigate(() => {
+	afterNavigate((navigation) => {
 		console.log('Navigated to articles page');
-		loadData();
+		// Only reload if we're navigating from outside the articles section
+		// or if URL parameters have changed (like feed filter)
+		const currentFeedId = $page.url.searchParams.get('feed');
+		if (currentFeedId !== feedId || (!$articles.length && !hasAttemptedLoad)) {
+			loadData();
+		}
 	});
 
 	// Filter articles based on search term and read status
@@ -340,15 +347,8 @@
 		</div>
 	{/if}
 
-	<!-- Loading State -->
-	{#if $loading.articles}
-		<div class="loading-state">
-			<div class="loading-spinner">⏳</div>
-			<p>Loading articles...</p>
-		</div>
-
-		<!-- Error State -->
-	{:else if $errors.articles}
+	<!-- Error State -->
+	{#if $errors.articles}
 		<div class="error-state">
 			<div class="error-icon">❌</div>
 			<h3>Failed to Load Articles</h3>
@@ -358,8 +358,8 @@
 			>
 		</div>
 
-		<!-- Empty State -->
-	{:else if $articles.length === 0}
+		<!-- Empty State - only show if we've attempted to load and there are truly no articles -->
+	{:else if $articles.length === 0 && hasAttemptedLoad}
 		<div class="empty-state">
 			<div class="empty-icon">📄</div>
 			<h3>No Articles Yet</h3>
