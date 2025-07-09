@@ -2,7 +2,9 @@
 	import { onMount, afterUpdate } from 'svelte';
 	import { afterNavigate } from '$app/navigation';
 	import { FeedService } from '$lib/services/feedService.js';
-	import { feeds, loading, errors } from '$lib/stores.js';
+	import { CategoryService } from '$lib/services/categoryService.js';
+	import { feeds, categories, loading, errors } from '$lib/stores.js';
+	import { rssApi } from '$lib/api.js';
 
 	let showAddFeed = false;
 	let newFeedUrl = '';
@@ -58,12 +60,17 @@
 	}
 
 	async function loadData() {
-		console.log('Loading feeds data...');
+		console.log('Loading feeds and categories data...');
 		try {
-			await FeedService.loadFeeds();
+			// Load both feeds and categories in parallel
+			await Promise.all([
+				FeedService.loadFeeds(),
+				CategoryService.loadCategories()
+			]);
 			console.log('Feeds loaded successfully, count:', $feeds.length);
+			console.log('Categories loaded successfully, count:', $categories.length);
 		} catch (error) {
-			console.error('Failed to load feeds:', error);
+			console.error('Failed to load data:', error);
 		}
 	}
 
@@ -98,6 +105,28 @@
 			await FeedService.deleteFeed(feedId);
 		} catch (error) {
 			console.error('Failed to delete feed:', error);
+		}
+	}
+
+	async function handleCategoryAssignment(feedId, categoryId) {
+		try {
+			// Convert empty string to null for uncategorized
+			const finalCategoryId = categoryId === '' ? null : parseInt(categoryId);
+			console.log('Assigning category:', { feedId, categoryId, finalCategoryId });
+			
+			await rssApi.assignCategory(feedId, finalCategoryId);
+			console.log('Category assigned successfully');
+			
+			// Update local state
+			feeds.update(currentFeeds =>
+				currentFeeds.map(feed =>
+					feed.ID === feedId ? { ...feed, CategoryID: finalCategoryId } : feed
+				)
+			);
+		} catch (error) {
+			console.error('Failed to assign category:', error);
+			// Optionally show user-friendly error message
+			alert('Failed to assign category. Please try again.');
 		}
 	}
 
@@ -415,6 +444,44 @@
 		justify-content: center;
 	}
 
+	/* Category Assignment */
+	.category-assignment {
+		margin: 1rem 0;
+		padding: 1rem;
+		background: var(--bg-primary);
+		border-radius: var(--radius);
+		border: 1px solid var(--border-light);
+	}
+
+	.category-label {
+		display: block;
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: var(--text-primary);
+		margin-bottom: 0.5rem;
+	}
+
+	.category-select {
+		width: 100%;
+		padding: 0.5rem 0.75rem;
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		background: var(--bg-secondary);
+		color: var(--text-primary);
+		font-size: 0.875rem;
+		transition: border-color 0.15s ease;
+		cursor: pointer;
+	}
+
+	.category-select:focus {
+		outline: none;
+		border-color: var(--primary);
+	}
+
+	.category-select:hover {
+		border-color: var(--primary);
+	}
+
 	/* Responsive */
 	@media (max-width: 768px) {
 		.content-header {
@@ -566,7 +633,7 @@
 				{#each filteredFeeds as feed (feed.ID || feed.id)}
 					<div class="feed-card">
 						<div class="feed-header">
-							<div class="feed-icon">📡</div>
+							<div class="feed-icon" style="background-color: {CategoryService.getCategoryColor(feed.CategoryID, $categories)}">📡</div>
 							<div class="feed-info">
 								<h4 class="feed-title">{decodeHtml(feed.Title) || 'Untitled Feed'}</h4>
 								<p class="feed-url">{feed.Url}</p>
@@ -595,7 +662,27 @@
 										<span class="stat-value enabled">✓ Enabled</span>
 									</span>
 								{/if}
+								<span class="stat">
+									<span class="stat-label">Category:</span>
+									<span class="stat-value">{CategoryService.getCategoryName(feed.CategoryID, $categories)}</span>
+								</span>
 							</div>
+						</div>
+
+						<!-- Category Assignment -->
+						<div class="category-assignment">
+							<label for="category-{feed.ID}" class="category-label">Assign to Category:</label>
+							<select 
+								id="category-{feed.ID}"
+								class="category-select"
+								value={feed.CategoryID || ''}
+								on:change={(e) => handleCategoryAssignment(feed.ID, e.target.value || null)}
+							>
+								<option value="">Uncategorized</option>
+								{#each $categories as category (category.ID)}
+									<option value={category.ID}>{category.Name}</option>
+								{/each}
+							</select>
 						</div>
 						
 						<div class="feed-footer">

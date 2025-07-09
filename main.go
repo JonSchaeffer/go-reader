@@ -61,6 +61,7 @@ func main() {
 	// Set up HTTP routes with CORS middleware
 	http.HandleFunc("/api/rss", corsMiddleware(routeRss))
 	http.HandleFunc("/api/rss/stats", corsMiddleware(routeRSSStats))             // RSS feed statistics
+	http.HandleFunc("/api/categories", corsMiddleware(routeCategories))         // Category management
 	http.HandleFunc("/api/articles", corsMiddleware(routeAllArticles))           // All articles
 	http.HandleFunc("/api/articles/single", corsMiddleware(routeSingleArticle))  // Single article by ?id=
 	http.HandleFunc("/api/articles/by-rss", corsMiddleware(routeArticlesByRSS))  // Articles by RSS ID
@@ -164,6 +165,21 @@ func routeDeleteArticle(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodDelete:
 		rss.DeleteArticle(w, r)
+	default:
+		http.Error(w, "Method is not allowed or supported", http.StatusMethodNotAllowed)
+	}
+}
+
+func routeCategories(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		rss.GetCategories(w, r)
+	case http.MethodPost:
+		rss.PostCategory(w, r)
+	case http.MethodPut:
+		rss.UpdateCategory(w, r)
+	case http.MethodDelete:
+		rss.DeleteCategory(w, r)
 	default:
 		http.Error(w, "Method is not allowed or supported", http.StatusMethodNotAllowed)
 	}

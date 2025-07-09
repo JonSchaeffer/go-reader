@@ -24,6 +24,13 @@ export class FeedService {
 				feedList = response.entries;
 			}
 			
+			// Debug: Check if CategoryID is included in the response
+			if (feedList.length > 0) {
+				console.log('First feed sample:', feedList[0]);
+				console.log('CategoryID field present:', 'CategoryID' in feedList[0]);
+				console.log('All feed fields:', Object.keys(feedList[0]));
+			}
+			
 			feeds.set(feedList);
 			return feedList;
 		} catch (error) {

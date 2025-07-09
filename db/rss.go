@@ -17,11 +17,41 @@ type RSS struct {
 	Description string
 	FeedSize    int
 	Sync        int
+	CategoryID  *int   // Nullable foreign key to category
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }
 
+type Category struct {
+	ID        int
+	Name      string
+	Color     string    // Hex color for visual distinction
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+func CreateCategoryTable() error {
+	query := `
+	CREATE TABLE IF NOT EXISTS category (
+	id SERIAL PRIMARY KEY,
+	name TEXT NOT NULL,
+	color TEXT DEFAULT '#3b82f6',
+	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+	CONSTRAINT unique_category_name UNIQUE (name)
+	)`
+	_, err := DB.Exec(context.Background(), query)
+	return err
+}
+
 func CreateRSSTable() error {
+	// First ensure category table exists
+	if err := CreateCategoryTable(); err != nil {
+		return err
+	}
+
+	// Create table without foreign key constraint first
 	query := `
 	CREATE TABLE IF NOT EXISTS rss (
 	id SERIAL PRIMARY KEY,
@@ -37,19 +67,72 @@ func CreateRSSTable() error {
 	CONSTRAINT unique_rss_url UNIQUE (url)
 	)`
 	_, err := DB.Exec(context.Background(), query)
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Add categoryID column if it doesn't exist
+	err = AddCategoryIDColumn()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func AddCategoryIDColumn() error {
+	// Check if categoryID column exists
+	checkQuery := `
+	SELECT COUNT(*) 
+	FROM information_schema.columns 
+	WHERE table_name = 'rss' AND column_name = 'categoryid'`
+	
+	var count int
+	err := DB.QueryRow(context.Background(), checkQuery).Scan(&count)
+	if err != nil {
+		return err
+	}
+
+	// If column doesn't exist, add it
+	if count == 0 {
+		log.Println("Adding categoryID column to RSS table...")
+		
+		// Add the column
+		alterQuery := `ALTER TABLE rss ADD COLUMN categoryID INT`
+		_, err = DB.Exec(context.Background(), alterQuery)
+		if err != nil {
+			return err
+		}
+
+		// Add the foreign key constraint
+		constraintQuery := `
+		ALTER TABLE rss 
+		ADD CONSTRAINT fk_rss_category 
+			FOREIGN KEY (categoryID) 
+			REFERENCES category(id) 
+			ON DELETE SET NULL 
+			ON UPDATE CASCADE`
+		_, err = DB.Exec(context.Background(), constraintQuery)
+		if err != nil {
+			return err
+		}
+
+		log.Println("Successfully added categoryID column and constraint")
+	}
+
+	return nil
 }
 
 func CreateRSS(url, fiveURL, title, description string, feedSize, sync int) (*RSS, error) {
 	query := `
-	INSERT INTO rss (url, fiveURL, title, description, feedSize, sync) 
-	VALUES ($1, $2, $3, $4, $5, $6)
+	INSERT INTO rss (url, fiveURL, title, description, feedSize, sync, categoryID) 
+	VALUES ($1, $2, $3, $4, $5, $6, NULL)
 	ON CONFLICT (url) DO NOTHING
-	RETURNING id, url, fiveURL, title, description, feedSize, sync, created_at, updated_at`
+	RETURNING id, url, fiveURL, title, description, feedSize, sync, categoryID, created_at, updated_at`
 
 	rss := &RSS{}
 	err := DB.QueryRow(context.Background(), query, url, fiveURL, title, description, feedSize, sync).Scan(
-		&rss.ID, &rss.URL, &rss.FiveURL, &rss.Title, &rss.Description, &rss.FeedSize, &rss.Sync,
+		&rss.ID, &rss.URL, &rss.FiveURL, &rss.Title, &rss.Description, &rss.FeedSize, &rss.Sync, &rss.CategoryID,
 		&rss.CreatedAt, &rss.UpdatedAt,
 	)
 
@@ -63,9 +146,9 @@ func CreateRSS(url, fiveURL, title, description string, feedSize, sync int) (*RS
 
 func GetAllRSS() ([]RSS, error) {
 	query := `
-	SELECT id, url, fiveurl, title, description, feedSize, sync, created_at, updated_at 
+	SELECT id, url, fiveurl, title, description, feedSize, sync, categoryID, created_at, updated_at 
 	FROM rss 
-	ORDER BY id`
+	ORDER BY categoryID NULLS FIRST, id`
 
 	rows, err := DB.Query(context.Background(), query)
 	if err != nil {
@@ -77,7 +160,7 @@ func GetAllRSS() ([]RSS, error) {
 	for rows.Next() {
 		var rss RSS
 		err := rows.Scan(&rss.ID, &rss.URL, &rss.FiveURL, &rss.Title, &rss.Description,
-			&rss.FeedSize, &rss.Sync, &rss.CreatedAt, &rss.UpdatedAt)
+			&rss.FeedSize, &rss.Sync, &rss.CategoryID, &rss.CreatedAt, &rss.UpdatedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -88,14 +171,14 @@ func GetAllRSS() ([]RSS, error) {
 
 func GetRSSByID(id int) (*RSS, error) {
 	query := `
-	SELECT id, url, fiveurl, title, description, feedSize, sync, created_at, updated_at
+	SELECT id, url, fiveurl, title, description, feedSize, sync, categoryID, created_at, updated_at
 	FROM rss
 	WHERE id = $1
 	`
 
 	rss := &RSS{}
 	err := DB.QueryRow(context.Background(), query, id).Scan(&rss.ID, &rss.URL, &rss.FiveURL,
-		&rss.Title, &rss.Description, &rss.FeedSize, &rss.Sync, &rss.CreatedAt, &rss.UpdatedAt)
+		&rss.Title, &rss.Description, &rss.FeedSize, &rss.Sync, &rss.CategoryID, &rss.CreatedAt, &rss.UpdatedAt)
 
 	return rss, err
 }
@@ -140,6 +223,8 @@ func UpdateRSS[T string | int](id int, param string, value T) error {
 		query = `UPDATE rss SET title = $1 WHERE id = $2`
 	case "description":
 		query = `UPDATE rss SET description = $1 WHERE id = $2`
+	case "categoryid":
+		query = `UPDATE rss SET categoryID = $1 WHERE id = $2`
 	default:
 		return fmt.Errorf("invalid parameter: %s", param)
 	}
@@ -222,4 +307,140 @@ func GetRSSStats(id int) (*RSSStats, error) {
 	}
 	
 	return stats, nil
+}
+
+// Category management functions
+
+func CreateCategory(name, color string) (*Category, error) {
+	query := `
+	INSERT INTO category (name, color) 
+	VALUES ($1, $2)
+	ON CONFLICT (name) DO NOTHING
+	RETURNING id, name, color, created_at, updated_at`
+
+	category := &Category{}
+	err := DB.QueryRow(context.Background(), query, name, color).Scan(
+		&category.ID, &category.Name, &category.Color, &category.CreatedAt, &category.UpdatedAt,
+	)
+
+	if err == pgx.ErrNoRows {
+		return nil, fmt.Errorf("category with name '%s' already exists", name)
+	}
+
+	return category, err
+}
+
+func GetAllCategories() ([]Category, error) {
+	query := `
+	SELECT id, name, color, created_at, updated_at 
+	FROM category 
+	ORDER BY name`
+
+	rows, err := DB.Query(context.Background(), query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var categories []Category
+	for rows.Next() {
+		var category Category
+		err := rows.Scan(&category.ID, &category.Name, &category.Color, &category.CreatedAt, &category.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+		categories = append(categories, category)
+	}
+	return categories, rows.Err()
+}
+
+func GetCategoryByID(id int) (*Category, error) {
+	query := `
+	SELECT id, name, color, created_at, updated_at
+	FROM category
+	WHERE id = $1
+	`
+
+	category := &Category{}
+	err := DB.QueryRow(context.Background(), query, id).Scan(&category.ID, &category.Name, &category.Color, &category.CreatedAt, &category.UpdatedAt)
+
+	return category, err
+}
+
+func UpdateCategory(id int, name, color string) error {
+	query := `UPDATE category SET name = $1, color = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3`
+
+	result, err := DB.Exec(context.Background(), query, name, color, id)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected := result.RowsAffected()
+	if rowsAffected == 0 {
+		return fmt.Errorf("category with ID %d not found", id)
+	}
+	return nil
+}
+
+func DeleteCategoryByID(id int) error {
+	// First, set all RSS feeds in this category to NULL
+	_, err := DB.Exec(context.Background(), "UPDATE rss SET categoryID = NULL WHERE categoryID = $1", id)
+	if err != nil {
+		return err
+	}
+
+	// Then delete the category
+	query := `DELETE FROM category WHERE id = $1`
+	result, err := DB.Exec(context.Background(), query, id)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected := result.RowsAffected()
+	if rowsAffected == 0 {
+		return fmt.Errorf("category with ID %d not found", id)
+	}
+
+	return nil
+}
+
+func GetRSSByCategory(categoryID *int) ([]RSS, error) {
+	var query string
+	var args []interface{}
+
+	if categoryID == nil {
+		// Get uncategorized feeds
+		query = `
+		SELECT id, url, fiveurl, title, description, feedSize, sync, categoryID, created_at, updated_at 
+		FROM rss 
+		WHERE categoryID IS NULL
+		ORDER BY id`
+		args = []interface{}{}
+	} else {
+		// Get feeds in specific category
+		query = `
+		SELECT id, url, fiveurl, title, description, feedSize, sync, categoryID, created_at, updated_at 
+		FROM rss 
+		WHERE categoryID = $1
+		ORDER BY id`
+		args = []interface{}{*categoryID}
+	}
+
+	rows, err := DB.Query(context.Background(), query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var rssFeeds []RSS
+	for rows.Next() {
+		var rss RSS
+		err := rows.Scan(&rss.ID, &rss.URL, &rss.FiveURL, &rss.Title, &rss.Description,
+			&rss.FeedSize, &rss.Sync, &rss.CategoryID, &rss.CreatedAt, &rss.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+		rssFeeds = append(rssFeeds, rss)
+	}
+	return rssFeeds, rows.Err()
 }

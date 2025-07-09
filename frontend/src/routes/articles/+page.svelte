@@ -8,6 +8,7 @@
 
 	let feedId = null;
 	let searchTerm = '';
+	let readFilter = 'all'; // 'all', 'unread', 'read'
 
 	// Function to decode HTML entities
 	function decodeHtml(html) {
@@ -138,6 +139,38 @@
 		}
 	}
 
+	function filterByFeed(rssId, event) {
+		// Prevent the row click from navigating to the article
+		event.stopPropagation();
+		event.preventDefault();
+
+		// Navigate to filtered view for this feed
+		window.location.href = `/articles?feed=${rssId}`;
+	}
+
+	async function markAllAsRead() {
+		const unreadArticles = $articles.filter(article => !article.Read);
+		
+		if (unreadArticles.length === 0) {
+			return; // No unread articles
+		}
+
+		if (!confirm(`Mark all ${unreadArticles.length} unread articles as read?`)) {
+			return;
+		}
+
+		try {
+			// Update all unread articles to read status
+			const updatePromises = unreadArticles.map(article => 
+				ArticleService.toggleReadStatus(article.ID, article.Read)
+			);
+			
+			await Promise.all(updatePromises);
+		} catch (error) {
+			console.error('Failed to mark all articles as read:', error);
+		}
+	}
+
 	onMount(() => {
 		console.log('Articles page mounted');
 		loadData();
@@ -148,13 +181,21 @@
 		loadData();
 	});
 
-	// Filter articles based on search term
-	$: filteredArticles = $articles.filter(
-		(article) =>
-			!searchTerm ||
+	// Filter articles based on search term and read status
+	$: filteredArticles = $articles.filter((article) => {
+		// Search filter
+		const matchesSearch = !searchTerm || 
 			decodeHtml(article.Title)?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-			decodeHtml(article.Description)?.toLowerCase().includes(searchTerm.toLowerCase())
-	);
+			decodeHtml(article.Description)?.toLowerCase().includes(searchTerm.toLowerCase());
+		
+		// Read status filter
+		const matchesReadFilter = 
+			readFilter === 'all' || 
+			(readFilter === 'unread' && !article.Read) ||
+			(readFilter === 'read' && article.Read);
+		
+		return matchesSearch && matchesReadFilter;
+	});
 </script>
 
 <svelte:head>
@@ -168,7 +209,10 @@
 		</h1>
 		<p style="color: var(--text-secondary); margin-top: 0.5rem;">
 			{#if feedId}
-				Showing articles from selected feed ({$articles.length} articles)
+				Showing articles from <strong>{getFeedName(parseInt(feedId))}</strong> ({$articles.length} articles)
+				<a href="/articles" style="color: var(--primary); margin-left: 0.5rem; text-decoration: none;">
+					← Show all feeds
+				</a>
 			{:else}
 				Browse all articles from your RSS feeds ({$articles.length} articles)
 			{/if}
@@ -191,6 +235,48 @@
 				{#if searchTerm}
 					<button class="btn-ghost search-clear" on:click={() => (searchTerm = '')}>✕</button>
 				{/if}
+			</div>
+		</div>
+
+		<!-- Filter Buttons -->
+		<div class="filter-bar">
+			<div class="filter-group">
+				<span class="filter-label">Show:</span>
+				<button 
+					class="filter-btn {readFilter === 'all' ? 'active' : ''}"
+					on:click={() => readFilter = 'all'}
+				>
+					All ({$articles.length})
+				</button>
+				<button 
+					class="filter-btn {readFilter === 'unread' ? 'active' : ''}"
+					on:click={() => readFilter = 'unread'}
+				>
+					📕 Unread ({$articles.filter(a => !a.Read).length})
+				</button>
+				<button 
+					class="filter-btn {readFilter === 'read' ? 'active' : ''}"
+					on:click={() => readFilter = 'read'}
+				>
+					📖 Read ({$articles.filter(a => a.Read).length})
+				</button>
+				
+				<!-- Separator -->
+				<div class="filter-separator"></div>
+				
+				<!-- Bulk Actions -->
+				<button 
+					class="bulk-action-btn"
+					on:click={markAllAsRead}
+					disabled={$articles.filter(a => !a.Read).length === 0 || $loading.articles}
+					title="Mark all unread articles as read"
+				>
+					{#if $loading.articles}
+						⏳ Updating...
+					{:else}
+						✓ Mark All Read
+					{/if}
+				</button>
 			</div>
 		</div>
 	{/if}
@@ -249,9 +335,13 @@
 					</button>
 
 					<!-- Feed Source -->
-					<div class="feed-source">
+					<button 
+						class="feed-source clickable"
+						on:click={(e) => filterByFeed(article.RssID, e)}
+						title="Filter articles from {getFeedName(article.RssID)}"
+					>
 						{getFeedName(article.RssID)}
-					</div>
+					</button>
 
 					<!-- Article Title -->
 					<div class="article-title">
@@ -319,6 +409,80 @@
 		position: absolute;
 		right: 0.5rem;
 		padding: 0.25rem;
+		color: var(--text-tertiary);
+	}
+
+	/* Filter Bar */
+	.filter-bar {
+		margin-bottom: 1.5rem;
+	}
+
+	.filter-group {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+	}
+
+	.filter-label {
+		font-size: 0.875rem;
+		color: var(--text-secondary);
+		font-weight: 500;
+		margin-right: 0.5rem;
+	}
+
+	.filter-btn {
+		padding: 0.5rem 0.75rem;
+		font-size: 0.875rem;
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		background: var(--bg-secondary);
+		color: var(--text-secondary);
+		cursor: pointer;
+		transition: all 0.15s ease;
+		white-space: nowrap;
+	}
+
+	.filter-btn:hover {
+		background: var(--bg-tertiary);
+		border-color: var(--primary);
+	}
+
+	.filter-btn.active {
+		background: var(--primary);
+		color: white;
+		border-color: var(--primary);
+	}
+
+	.filter-separator {
+		width: 1px;
+		height: 2rem;
+		background: var(--border);
+		margin: 0 0.5rem;
+	}
+
+	.bulk-action-btn {
+		padding: 0.5rem 1rem;
+		font-size: 0.875rem;
+		border: 1px solid var(--success);
+		border-radius: var(--radius);
+		background: var(--bg-secondary);
+		color: var(--success);
+		cursor: pointer;
+		transition: all 0.15s ease;
+		white-space: nowrap;
+		font-weight: 500;
+	}
+
+	.bulk-action-btn:hover:not(:disabled) {
+		background: var(--success);
+		color: white;
+	}
+
+	.bulk-action-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+		border-color: var(--border);
 		color: var(--text-tertiary);
 	}
 
@@ -425,6 +589,21 @@
 		min-width: 4rem;
 		text-align: center;
 		font-weight: 500;
+		border: 1px solid transparent;
+		cursor: default;
+	}
+
+	.feed-source.clickable {
+		cursor: pointer;
+		transition: all 0.15s ease;
+		border-color: var(--border-light);
+	}
+
+	.feed-source.clickable:hover {
+		background: var(--primary-light);
+		color: var(--primary);
+		border-color: var(--primary);
+		transform: translateY(-1px);
 	}
 
 	/* Article Title */
@@ -480,6 +659,25 @@
 
 	/* Responsive */
 	@media (max-width: 768px) {
+		.filter-group {
+			flex-direction: column;
+			align-items: stretch;
+			gap: 0.75rem;
+		}
+
+		.filter-label {
+			margin-right: 0;
+		}
+
+		.filter-separator {
+			display: none;
+		}
+
+		.bulk-action-btn {
+			width: 100%;
+			justify-content: center;
+		}
+
 		.article-row {
 			padding: 0.5rem 0.75rem;
 			gap: 0.75rem;

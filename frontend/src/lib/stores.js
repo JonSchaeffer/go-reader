@@ -11,6 +11,11 @@ export const feeds = writable([]);
 export const articles = writable([]);
 
 /**
+ * Categories store
+ */
+export const categories = writable([]);
+
+/**
  * Selected feed store
  */
 export const selectedFeed = writable(null);
@@ -21,6 +26,7 @@ export const selectedFeed = writable(null);
 export const loading = writable({
 	feeds: false,
 	articles: false,
+	categories: false,
 	adding: false,
 	deleting: false
 });
@@ -31,6 +37,7 @@ export const loading = writable({
 export const errors = writable({
 	feeds: null,
 	articles: null,
+	categories: null,
 	general: null
 });
 
@@ -60,5 +67,5 @@ export const setError = (key, value) => {
 };
 
 export const clearErrors = () => {
-	errors.set({ feeds: null, articles: null, general: null });
+	errors.set({ feeds: null, articles: null, categories: null, general: null });
 };

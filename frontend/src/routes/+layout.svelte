@@ -2,18 +2,38 @@
 	import { page } from '$app/stores';
 	import { browser } from '$app/environment';
 	import { onMount } from 'svelte';
+	import { FeedService } from '$lib/services/feedService.js';
+	import { CategoryService } from '$lib/services/categoryService.js';
+	import { feeds, categories } from '$lib/stores.js';
 	import '../app.css';
 
 	// Theme management
 	let theme = 'light';
 	let sidebarOpen = false;
+	let collapsedCategories = new Set();
 
-	onMount(() => {
+	onMount(async () => {
 		// Load theme from localStorage
 		if (browser) {
 			const savedTheme = localStorage.getItem('theme') || 'light';
 			theme = savedTheme;
 			document.documentElement.setAttribute('data-theme', theme);
+			
+			// Load collapsed categories from localStorage
+			const collapsed = localStorage.getItem('collapsedCategories');
+			if (collapsed) {
+				collapsedCategories = new Set(JSON.parse(collapsed));
+			}
+		}
+
+		// Load feeds and categories data
+		try {
+			await Promise.all([
+				FeedService.loadFeeds(),
+				CategoryService.loadCategories()
+			]);
+		} catch (error) {
+			console.error('Failed to load sidebar data:', error);
 		}
 	});
 
@@ -29,6 +49,47 @@
 	function toggleSidebar() {
 		sidebarOpen = !sidebarOpen;
 	}
+
+	function toggleCategory(categoryId) {
+		if (collapsedCategories.has(categoryId)) {
+			collapsedCategories.delete(categoryId);
+		} else {
+			collapsedCategories.add(categoryId);
+		}
+		collapsedCategories = collapsedCategories; // Trigger reactivity
+		
+		// Save to localStorage
+		if (browser) {
+			localStorage.setItem('collapsedCategories', JSON.stringify([...collapsedCategories]));
+		}
+	}
+
+	// Group feeds by category
+	$: groupedFeeds = (() => {
+		const grouped = {
+			uncategorized: [],
+			categories: {}
+		};
+
+		// Initialize categories
+		$categories.forEach(category => {
+			grouped.categories[category.ID] = {
+				...category,
+				feeds: []
+			};
+		});
+
+		// Group feeds
+		$feeds.forEach(feed => {
+			if (feed.CategoryID && grouped.categories[feed.CategoryID]) {
+				grouped.categories[feed.CategoryID].feeds.push(feed);
+			} else {
+				grouped.uncategorized.push(feed);
+			}
+		});
+
+		return grouped;
+	})();
 
 	// Navigation items
 	const navItems = [
@@ -52,6 +113,12 @@
 		{
 			section: 'Organization',
 			items: [
+				{
+					label: 'Categories',
+					href: '/categories',
+					icon: '📁',
+					active: false
+				},
 				{
 					label: 'Lists',
 					href: '/lists',
@@ -137,6 +204,81 @@
 					</ul>
 				</div>
 			{/each}
+
+			<!-- Feeds by Category -->
+			{#if $feeds.length > 0}
+				<div class="nav-section">
+					<h3 class="nav-section-title">My Feeds</h3>
+					
+					<!-- Categorized Feeds -->
+					{#each Object.values(groupedFeeds.categories) as category}
+						{#if category.feeds.length > 0}
+							<div class="category-group">
+								<button 
+									class="category-header"
+									on:click={() => toggleCategory(category.ID)}
+								>
+									<span class="category-icon" style="background-color: {category.Color}">📁</span>
+									<span class="category-name">{category.Name}</span>
+									<span class="category-toggle {collapsedCategories.has(category.ID) ? 'collapsed' : ''}">
+										{collapsedCategories.has(category.ID) ? '▶' : '▼'}
+									</span>
+								</button>
+								
+								{#if !collapsedCategories.has(category.ID)}
+									<ul class="feed-list">
+										{#each category.feeds as feed}
+											<li class="feed-item">
+												<a 
+													href="/articles?feed={feed.ID}" 
+													class="feed-link"
+													on:click={() => sidebarOpen = false}
+												>
+													<span class="feed-icon">📡</span>
+													<span class="feed-name">{feed.Title || 'Untitled Feed'}</span>
+												</a>
+											</li>
+										{/each}
+									</ul>
+								{/if}
+							</div>
+						{/if}
+					{/each}
+
+					<!-- Uncategorized Feeds -->
+					{#if groupedFeeds.uncategorized.length > 0}
+						<div class="category-group">
+							<button 
+								class="category-header"
+								on:click={() => toggleCategory('uncategorized')}
+							>
+								<span class="category-icon">📂</span>
+								<span class="category-name">Uncategorized</span>
+								<span class="category-toggle {collapsedCategories.has('uncategorized') ? 'collapsed' : ''}">
+									{collapsedCategories.has('uncategorized') ? '▶' : '▼'}
+								</span>
+							</button>
+							
+							{#if !collapsedCategories.has('uncategorized')}
+								<ul class="feed-list">
+									{#each groupedFeeds.uncategorized as feed}
+										<li class="feed-item">
+											<a 
+												href="/articles?feed={feed.ID}" 
+												class="feed-link"
+												on:click={() => sidebarOpen = false}
+											>
+												<span class="feed-icon">📡</span>
+												<span class="feed-name">{feed.Title || 'Untitled Feed'}</span>
+											</a>
+										</li>
+									{/each}
+								</ul>
+							{/if}
+						</div>
+					{/if}
+				</div>
+			{/if}
 		</nav>
 	</aside>
 
@@ -184,5 +326,106 @@
 	
 	.z-10 {
 		z-index: 10;
+	}
+
+	/* Category Group Styles */
+	.category-group {
+		margin-bottom: 0.5rem;
+	}
+
+	.category-header {
+		width: 100%;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.5rem 0.75rem;
+		background: none;
+		border: none;
+		color: var(--text-secondary);
+		font-size: 0.875rem;
+		font-weight: 500;
+		cursor: pointer;
+		transition: all 0.15s ease;
+		border-radius: var(--radius);
+	}
+
+	.category-header:hover {
+		background: var(--bg-tertiary);
+		color: var(--text-primary);
+	}
+
+	.category-icon {
+		width: 1.25rem;
+		height: 1.25rem;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: 4px;
+		font-size: 0.75rem;
+		flex-shrink: 0;
+	}
+
+	.category-name {
+		flex: 1;
+		text-align: left;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.category-toggle {
+		font-size: 0.75rem;
+		transition: transform 0.15s ease;
+		flex-shrink: 0;
+	}
+
+	.category-toggle.collapsed {
+		transform: rotate(-90deg);
+	}
+
+	/* Feed List Styles */
+	.feed-list {
+		margin: 0.25rem 0 0 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.feed-item {
+		margin: 0;
+	}
+
+	.feed-link {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.375rem 0.75rem 0.375rem 2rem;
+		color: var(--text-tertiary);
+		text-decoration: none;
+		font-size: 0.8125rem;
+		border-radius: var(--radius);
+		transition: all 0.15s ease;
+	}
+
+	.feed-link:hover {
+		background: var(--bg-tertiary);
+		color: var(--text-primary);
+	}
+
+	.feed-icon {
+		font-size: 0.75rem;
+		flex-shrink: 0;
+	}
+
+	.feed-name {
+		flex: 1;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	/* Active state for current feed */
+	.feed-link.active {
+		background: var(--primary-light);
+		color: var(--primary);
 	}
 </style>

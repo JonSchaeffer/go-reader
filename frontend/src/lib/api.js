@@ -80,6 +80,19 @@ export const rssApi = {
 	},
 
 	/**
+	 * Assign feed to category
+	 */
+	async assignCategory(feedId, categoryId) {
+		const params = new URLSearchParams({ 
+			id: feedId.toString(), 
+			categoryid: categoryId || 'null'
+		});
+		return apiRequest(`/rss?${params}`, {
+			method: 'PUT'
+		});
+	},
+
+	/**
 	 * Delete RSS feed
 	 */
 	async delete(id) {
@@ -93,6 +106,47 @@ export const rssApi = {
 	 */
 	async getStats(id) {
 		return apiRequest(`/rss/stats?id=${id}`);
+	}
+};
+
+/**
+ * Category API functions
+ */
+export const categoryApi = {
+	/**
+	 * Get all categories
+	 */
+	async getAll() {
+		return apiRequest('/categories');
+	},
+
+	/**
+	 * Create new category
+	 */
+	async create(name, color = '#3b82f6') {
+		return apiRequest('/categories', {
+			method: 'POST',
+			body: JSON.stringify({ name, color })
+		});
+	},
+
+	/**
+	 * Update category
+	 */
+	async update(id, name, color) {
+		return apiRequest(`/categories?id=${id}`, {
+			method: 'PUT',
+			body: JSON.stringify({ name, color })
+		});
+	},
+
+	/**
+	 * Delete category
+	 */
+	async delete(id) {
+		return apiRequest(`/categories?id=${id}`, {
+			method: 'DELETE'
+		});
 	}
 };
 

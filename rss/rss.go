@@ -430,14 +430,15 @@ func UpdateRSS(w http.ResponseWriter, r *http.Request) {
 	urlParam := r.URL.Query().Get("url")
 	feedSizeParam := r.URL.Query().Get("feedsize")
 	syncParam := r.URL.Query().Get("sync")
+	categoryIDParam := r.URL.Query().Get("categoryid")
 
 	if idParam == "" {
 		http.Error(w, "ID parameter is required", http.StatusBadRequest)
 		return
 	}
 
-	if urlParam == "" && feedSizeParam == "" && syncParam == "" {
-		http.Error(w, "At least one parameter (url, feedsize, sync) is required", http.StatusBadRequest)
+	if urlParam == "" && feedSizeParam == "" && syncParam == "" && categoryIDParam == "" {
+		http.Error(w, "At least one parameter (url, feedsize, sync, categoryid) is required", http.StatusBadRequest)
 		return
 	}
 
@@ -489,6 +490,32 @@ func UpdateRSS(w http.ResponseWriter, r *http.Request) {
 		}
 		updatedFields = append(updatedFields, "sync")
 		updatedValues["sync"] = sync
+	}
+
+	if categoryIDParam != "" {
+		if categoryIDParam == "null" || categoryIDParam == "" {
+			// Set to NULL for uncategorized
+			err = db.UpdateRSS(id, "categoryid", nil)
+			if err != nil {
+				http.Error(w, "Error updating RSS feed category", http.StatusBadRequest)
+				return
+			}
+			updatedFields = append(updatedFields, "categoryid")
+			updatedValues["categoryid"] = nil
+		} else {
+			categoryID, err := strconv.Atoi(categoryIDParam)
+			if err != nil {
+				http.Error(w, "Invalid category ID parameter", http.StatusBadRequest)
+				return
+			}
+			err = db.UpdateRSS(id, "categoryid", categoryID)
+			if err != nil {
+				http.Error(w, "Error updating RSS feed category", http.StatusBadRequest)
+				return
+			}
+			updatedFields = append(updatedFields, "categoryid")
+			updatedValues["categoryid"] = categoryID
+		}
 	}
 
 	// Send success response
@@ -556,4 +583,122 @@ func DeleteArticle(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(fmt.Sprintf("Article %d deleted successfully", id)))
+}
+
+// Category management handlers
+
+func GetCategories(w http.ResponseWriter, r *http.Request) {
+	categories, err := db.GetAllCategories()
+	if err != nil {
+		http.Error(w, "Failed to get categories", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(categories)
+}
+
+func PostCategory(w http.ResponseWriter, r *http.Request) {
+	var reqData struct {
+		Name  string `json:"name"`
+		Color string `json:"color"`
+	}
+
+	err := json.NewDecoder(r.Body).Decode(&reqData)
+	if err != nil {
+		http.Error(w, "Invalid JSON data", http.StatusBadRequest)
+		return
+	}
+
+	if reqData.Name == "" {
+		http.Error(w, "Category name is required", http.StatusBadRequest)
+		return
+	}
+
+	// Set default color if not provided
+	if reqData.Color == "" {
+		reqData.Color = "#3b82f6"
+	}
+
+	category, err := db.CreateCategory(reqData.Name, reqData.Color)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to create category: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(category)
+}
+
+func UpdateCategory(w http.ResponseWriter, r *http.Request) {
+	idParam := r.URL.Query().Get("id")
+	if idParam == "" {
+		http.Error(w, "ID parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		http.Error(w, "Invalid ID parameter", http.StatusBadRequest)
+		return
+	}
+
+	var reqData struct {
+		Name  string `json:"name"`
+		Color string `json:"color"`
+	}
+
+	err = json.NewDecoder(r.Body).Decode(&reqData)
+	if err != nil {
+		http.Error(w, "Invalid JSON data", http.StatusBadRequest)
+		return
+	}
+
+	if reqData.Name == "" {
+		http.Error(w, "Category name is required", http.StatusBadRequest)
+		return
+	}
+
+	if reqData.Color == "" {
+		reqData.Color = "#3b82f6"
+	}
+
+	err = db.UpdateCategory(id, reqData.Name, reqData.Color)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to update category: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	response := map[string]any{
+		"message": fmt.Sprintf("Category %d updated successfully", id),
+		"id":      id,
+		"name":    reqData.Name,
+		"color":   reqData.Color,
+	}
+	json.NewEncoder(w).Encode(response)
+}
+
+func DeleteCategory(w http.ResponseWriter, r *http.Request) {
+	idParam := r.URL.Query().Get("id")
+	if idParam == "" {
+		http.Error(w, "ID parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		http.Error(w, "Invalid ID parameter", http.StatusBadRequest)
+		return
+	}
+
+	err = db.DeleteCategoryByID(id)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to delete category: %v", err), http.StatusNotFound)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(fmt.Sprintf("Category %d deleted successfully", id)))
 }
