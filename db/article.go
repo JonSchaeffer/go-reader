@@ -76,7 +76,7 @@ func GetArticleByRSSID(id, limit int) ([]Article, error) {
 	SELECT id, rssID, title, link, GUID, description, publishDate, format, identifier, read, created_at, updated_at
 	FROM article
 	WHERE rssid = $1
-	ORDER BY created_at DESC
+	ORDER BY publishDate DESC NULLS LAST, created_at DESC
 	LIMIT $2
 	`
 
@@ -151,7 +151,7 @@ func GetAllArticles() ([]Article, error) {
 	query := `
 	SELECT id, rssID, title, link, GUID, description, publishDate, format, identifier, read, created_at, updated_at
 	FROM article
-	ORDER BY created_at DESC
+	ORDER BY publishDate DESC NULLS LAST, created_at DESC
 	`
 
 	rows, err := DB.Query(context.Background(), query)
@@ -179,7 +179,7 @@ func SearchArticles(query string, limit int) ([]Article, error) {
 	SELECT id, rssID, title, link, GUID, description, publishDate, format, identifier, read, created_at, updated_at
 	FROM article
 	WHERE to_tsvector('english', title || ' ' || description) @@ plainto_tsquery('english', $1)
-	ORDER BY created_at DESC
+	ORDER BY publishDate DESC NULLS LAST, created_at DESC
 	LIMIT $2
 	`
 
