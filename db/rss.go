@@ -25,7 +25,7 @@ type RSS struct {
 type Category struct {
 	ID        int
 	Name      string
-	Color     string    // Hex color for visual distinction
+	Color     string // Hex color for visual distinction
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
@@ -75,59 +75,6 @@ func CreateRSSTable() error {
 	err = AddCategoryIDColumn()
 	if err != nil {
 		return err
-	}
-
-	return nil
-}
-
-func AddCategoryIDColumn() error {
-	log.Println("Checking if categoryID column exists...")
-	
-	// Check if categoryID column exists
-	checkQuery := `
-	SELECT COUNT(*) 
-	FROM information_schema.columns 
-	WHERE table_name = 'rss' AND column_name = 'categoryid'`
-	
-	var count int
-	err := DB.QueryRow(context.Background(), checkQuery).Scan(&count)
-	if err != nil {
-		log.Printf("Error checking for categoryID column: %v", err)
-		return err
-	}
-
-	log.Printf("CategoryID column check: found %d columns", count)
-
-	// If column doesn't exist, add it
-	if count == 0 {
-		log.Println("Adding categoryID column to RSS table...")
-		
-		// Add the column
-		alterQuery := `ALTER TABLE rss ADD COLUMN categoryID INT`
-		_, err = DB.Exec(context.Background(), alterQuery)
-		if err != nil {
-			log.Printf("Error adding categoryID column: %v", err)
-			return err
-		}
-		log.Println("CategoryID column added successfully")
-
-		// Add the foreign key constraint
-		constraintQuery := `
-		ALTER TABLE rss 
-		ADD CONSTRAINT fk_rss_category 
-			FOREIGN KEY (categoryID) 
-			REFERENCES category(id) 
-			ON DELETE SET NULL 
-			ON UPDATE CASCADE`
-		_, err = DB.Exec(context.Background(), constraintQuery)
-		if err != nil {
-			log.Printf("Error adding foreign key constraint: %v", err)
-			return err
-		}
-
-		log.Println("Successfully added categoryID column and constraint")
-	} else {
-		log.Println("CategoryID column already exists, skipping migration")
 	}
 
 	return nil
@@ -263,7 +210,7 @@ func UpdateRSSCategoryID(id int, categoryID *int) error {
 	if rowsAffected == 0 {
 		return fmt.Errorf("RSS with ID %d not found", id)
 	}
-	
+
 	log.Printf("Successfully updated RSS %d categoryID to %v", id, categoryID)
 	return nil
 }
@@ -281,33 +228,33 @@ type RSSStats struct {
 
 func GetRSSStats(id int) (*RSSStats, error) {
 	stats := &RSSStats{FeedID: id}
-	
+
 	// Get total article count
-	err := DB.QueryRow(context.Background(), 
+	err := DB.QueryRow(context.Background(),
 		"SELECT COUNT(*) FROM article WHERE rssid = $1", id).Scan(&stats.TotalArticles)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Get unread article count
-	err = DB.QueryRow(context.Background(), 
+	err = DB.QueryRow(context.Background(),
 		"SELECT COUNT(*) FROM article WHERE rssid = $1 AND read = false", id).Scan(&stats.UnreadArticles)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Calculate read articles
 	stats.ReadArticles = stats.TotalArticles - stats.UnreadArticles
-	
+
 	// Get oldest and newest article dates (return early if no articles)
 	if stats.TotalArticles > 0 {
-		err = DB.QueryRow(context.Background(), 
-			"SELECT MIN(created_at), MAX(created_at) FROM article WHERE rssid = $1", 
+		err = DB.QueryRow(context.Background(),
+			"SELECT MIN(created_at), MAX(created_at) FROM article WHERE rssid = $1",
 			id).Scan(&stats.OldestArticle, &stats.NewestArticle)
 		if err != nil {
 			return nil, err
 		}
-		
+
 		// Get days since last post (using publishDate if available, otherwise created_at)
 		var lastPostDate time.Time
 		err = DB.QueryRow(context.Background(), `
@@ -322,17 +269,17 @@ func GetRSSStats(id int) (*RSSStats, error) {
 		if err != nil {
 			return nil, err
 		}
-		
+
 		stats.DaysSinceLastPost = int(time.Since(lastPostDate).Hours() / 24)
 	}
-	
+
 	// Get RSS feed last updated time
-	err = DB.QueryRow(context.Background(), 
+	err = DB.QueryRow(context.Background(),
 		"SELECT updated_at FROM rss WHERE id = $1", id).Scan(&stats.LastUpdated)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return stats, nil
 }
 

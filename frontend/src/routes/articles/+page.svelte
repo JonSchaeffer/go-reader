@@ -1,5 +1,5 @@
 <script>
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import { page } from '$app/stores';
 	import { afterNavigate } from '$app/navigation';
 	import { ArticleService } from '$lib/services/articleService.js';
@@ -9,6 +9,8 @@
 	let feedId = null;
 	let searchTerm = '';
 	let readFilter = 'all'; // 'all', 'unread', 'read'
+	let refreshInterval = null;
+	let isRefreshing = false;
 
 	// Function to decode HTML entities
 	function decodeHtml(html) {
@@ -171,9 +173,52 @@
 		}
 	}
 
+	async function refreshArticles() {
+		isRefreshing = true;
+		try {
+			if (feedId) {
+				await ArticleService.loadArticlesByFeedSilently(feedId);
+			} else {
+				await ArticleService.refreshArticlesSilently();
+			}
+		} catch (error) {
+			console.error('Failed to refresh articles:', error);
+		} finally {
+			isRefreshing = false;
+		}
+	}
+
+	async function refreshArticlesSilently() {
+		try {
+			if (feedId) {
+				await ArticleService.loadArticlesByFeedSilently(feedId);
+			} else {
+				await ArticleService.refreshArticlesSilently();
+			}
+		} catch (error) {
+			console.error('Failed to refresh articles silently:', error);
+		}
+	}
+
+	function startAutoRefresh() {
+		refreshInterval = setInterval(refreshArticlesSilently, 60000); // Refresh every minute silently
+	}
+
+	function stopAutoRefresh() {
+		if (refreshInterval) {
+			clearInterval(refreshInterval);
+			refreshInterval = null;
+		}
+	}
+
 	onMount(() => {
 		console.log('Articles page mounted');
 		loadData();
+		startAutoRefresh();
+	});
+
+	onDestroy(() => {
+		stopAutoRefresh();
 	});
 
 	afterNavigate(() => {
@@ -275,6 +320,20 @@
 						⏳ Updating...
 					{:else}
 						✓ Mark All Read
+					{/if}
+				</button>
+				
+				<!-- Refresh Button -->
+				<button 
+					class="refresh-btn"
+					on:click={refreshArticles}
+					disabled={isRefreshing}
+					title="Refresh articles (Auto-refresh every minute)"
+				>
+					{#if isRefreshing}
+						⏳ Refreshing...
+					{:else}
+						🔄 Refresh
 					{/if}
 				</button>
 			</div>
@@ -480,6 +539,31 @@
 	}
 
 	.bulk-action-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+		border-color: var(--border);
+		color: var(--text-tertiary);
+	}
+
+	.refresh-btn {
+		padding: 0.5rem 1rem;
+		font-size: 0.875rem;
+		border: 1px solid var(--primary);
+		border-radius: var(--radius);
+		background: var(--bg-secondary);
+		color: var(--primary);
+		cursor: pointer;
+		transition: all 0.15s ease;
+		white-space: nowrap;
+		font-weight: 500;
+	}
+
+	.refresh-btn:hover:not(:disabled) {
+		background: var(--primary);
+		color: white;
+	}
+
+	.refresh-btn:disabled {
 		opacity: 0.5;
 		cursor: not-allowed;
 		border-color: var(--border);

@@ -174,4 +174,57 @@ export class ArticleService {
 			? description.substring(0, maxLength) + '...'
 			: description;
 	}
+
+	/**
+	 * Refresh articles - reload current view
+	 */
+	static async refreshArticles() {
+		setLoading('articles', true);
+		setError('articles', null);
+
+		try {
+			const response = await articleApi.getAll();
+			const articleList = Array.isArray(response) ? response : [];
+			articles.set(articleList);
+			return articleList;
+		} catch (error) {
+			console.error('Failed to refresh articles:', error);
+			setError('articles', 'Failed to refresh articles');
+			throw error;
+		} finally {
+			setLoading('articles', false);
+		}
+	}
+
+	/**
+	 * Refresh articles silently - reload without showing loading state
+	 */
+	static async refreshArticlesSilently() {
+		try {
+			const response = await articleApi.getAll();
+			const articleList = Array.isArray(response) ? response : [];
+			articles.set(articleList);
+			return articleList;
+		} catch (error) {
+			console.error('Failed to refresh articles silently:', error);
+			// Don't set error state for silent refresh to avoid disrupting user experience
+			throw error;
+		}
+	}
+
+	/**
+	 * Load articles by feed silently - reload without showing loading state
+	 */
+	static async loadArticlesByFeedSilently(feedId, limit = 100) {
+		try {
+			const response = await articleApi.getByRssId(feedId, limit);
+			const articleList = Array.isArray(response) ? response : [];
+			articles.set(articleList);
+			return articleList;
+		} catch (error) {
+			console.error('Failed to load articles by feed silently:', error);
+			// Don't set error state for silent refresh to avoid disrupting user experience
+			throw error;
+		}
+	}
 }
