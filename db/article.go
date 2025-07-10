@@ -76,6 +76,7 @@ func GetArticleByRSSID(id, limit int) ([]Article, error) {
 	SELECT id, rssID, title, link, GUID, description, publishDate, format, identifier, read, created_at, updated_at
 	FROM article
 	WHERE rssid = $1
+	AND publishDate != '' AND publishDate IS NOT NULL
 	ORDER BY publishDate::TIMESTAMP DESC
 	LIMIT $2
 	`
@@ -151,7 +152,8 @@ func GetAllArticles() ([]Article, error) {
 	query := `
 	SELECT id, rssID, title, link, GUID, description, publishDate, format, identifier, read, created_at, updated_at
 	FROM article
-	ORDER BY publishDate::TIMESTAMP
+	WHERE publishDate != '' AND publishDate IS NOT NULL
+	ORDER BY publishDate::TIMESTAMP DESC;
 	`
 
 	rows, err := DB.Query(context.Background(), query)
@@ -179,7 +181,8 @@ func SearchArticles(query string, limit int) ([]Article, error) {
 	SELECT id, rssID, title, link, GUID, description, publishDate, format, identifier, read, created_at, updated_at
 	FROM article
 	WHERE to_tsvector('english', title || ' ' || description) @@ plainto_tsquery('english', $1)
-	ORDER BY publishDate::TIMESTAMP DESC 
+	AND publishDate != '' AND publishDate IS NOT NULL
+	ORDER BY publishDate::TIMESTAMP DESC
 	LIMIT $2
 	`
 
