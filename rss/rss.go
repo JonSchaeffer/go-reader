@@ -531,26 +531,26 @@ func UpdateRSS(w http.ResponseWriter, r *http.Request) {
 
 func GetRSSStats(w http.ResponseWriter, r *http.Request) {
 	idParam := r.URL.Query().Get("id")
-	
+
 	if idParam == "" {
 		http.Error(w, "ID parameter is required", http.StatusBadRequest)
 		return
 	}
-	
+
 	// Convert ID parameter to integer
 	id, err := strconv.Atoi(idParam)
 	if err != nil {
 		http.Error(w, "Invalid ID parameter", http.StatusBadRequest)
 		return
 	}
-	
+
 	// Get stats from database
 	stats, err := db.GetRSSStats(id)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error retrieving stats for RSS feed %d: %v", id, err), http.StatusNotFound)
 		return
 	}
-	
+
 	// Return stats as JSON
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(stats); err != nil {

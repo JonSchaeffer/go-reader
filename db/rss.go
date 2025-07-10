@@ -71,12 +71,6 @@ func CreateRSSTable() error {
 		return err
 	}
 
-	// Add categoryID column if it doesn't exist
-	err = AddCategoryIDColumn()
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
