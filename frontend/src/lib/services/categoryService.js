@@ -1,5 +1,5 @@
 import { categoryApi } from '../api.js';
-import { categories, setLoading, setError } from '../stores.js';
+import { categories } from '../stores.js';
 
 /**
  * Service for managing categories with state management
@@ -9,8 +9,6 @@ export class CategoryService {
 	 * Load all categories
 	 */
 	static async loadCategories() {
-		setLoading('categories', true);
-		setError('categories', null);
 
 		try {
 			const response = await categoryApi.getAll();
@@ -20,11 +18,7 @@ export class CategoryService {
 			categories.set(categoryList);
 			return categoryList;
 		} catch (error) {
-			console.error('Failed to load categories:', error);
-			setError('categories', 'Failed to load categories. Please check if the backend is running.');
 			throw error;
-		} finally {
-			setLoading('categories', false);
 		}
 	}
 
@@ -32,8 +26,6 @@ export class CategoryService {
 	 * Create a new category
 	 */
 	static async createCategory(name, color = '#3b82f6') {
-		setLoading('adding', true);
-		setError('categories', null);
 
 		try {
 			const newCategory = await categoryApi.create(name, color);
@@ -45,10 +37,7 @@ export class CategoryService {
 			return newCategory;
 		} catch (error) {
 			console.error('Failed to create category:', error);
-			setError('categories', 'Failed to create category.');
 			throw error;
-		} finally {
-			setLoading('adding', false);
 		}
 	}
 
@@ -56,8 +45,6 @@ export class CategoryService {
 	 * Update an existing category
 	 */
 	static async updateCategory(id, name, color) {
-		setLoading('categories', true);
-		setError('categories', null);
 
 		try {
 			await categoryApi.update(id, name, color);
@@ -73,10 +60,7 @@ export class CategoryService {
 			return true;
 		} catch (error) {
 			console.error('Failed to update category:', error);
-			setError('categories', 'Failed to update category.');
 			throw error;
-		} finally {
-			setLoading('categories', false);
 		}
 	}
 
@@ -84,8 +68,6 @@ export class CategoryService {
 	 * Delete a category
 	 */
 	static async deleteCategory(id, categoryName = 'this category') {
-		setLoading('deleting', true);
-		setError('categories', null);
 
 		try {
 			await categoryApi.delete(id);
@@ -99,10 +81,7 @@ export class CategoryService {
 			return true;
 		} catch (error) {
 			console.error('Failed to delete category:', error);
-			setError('categories', `Failed to delete ${categoryName}.`);
 			throw error;
-		} finally {
-			setLoading('deleting', false);
 		}
 	}
 

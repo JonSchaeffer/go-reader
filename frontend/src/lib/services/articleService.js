@@ -1,5 +1,5 @@
 import { articleApi } from '../api.js';
-import { articles, setLoading, setError } from '../stores.js';
+import { articles } from '../stores.js';
 
 /**
  * Service for managing articles with state management
@@ -46,7 +46,6 @@ export class ArticleService {
 			setError('articles', 'Failed to load articles. Please check if the backend is running.');
 			throw error;
 		} finally {
-			setLoading('articles', false);
 		}
 	}
 
@@ -54,9 +53,6 @@ export class ArticleService {
 	 * Load articles for a specific RSS feed
 	 */
 	static async loadArticlesByFeed(feedId, limit = 100) {
-		setLoading('articles', true);
-		setError('articles', null);
-
 		try {
 			const response = await articleApi.getByRssId(feedId, limit);
 			console.log('Articles by feed response:', response);
@@ -69,7 +65,6 @@ export class ArticleService {
 			setError('articles', 'Failed to load articles for this feed.');
 			throw error;
 		} finally {
-			setLoading('articles', false);
 		}
 	}
 
@@ -80,9 +75,6 @@ export class ArticleService {
 		if (!query || !query.trim()) {
 			return this.loadAllArticles();
 		}
-
-		setLoading('articles', true);
-		setError('articles', null);
 
 		try {
 			const response = await articleApi.search(query.trim(), limit);
@@ -96,7 +88,6 @@ export class ArticleService {
 			setError('articles', 'Search failed. Please try again.');
 			throw error;
 		} finally {
-			setLoading('articles', false);
 		}
 	}
 
@@ -201,8 +192,6 @@ export class ArticleService {
 	 * Refresh articles - reload current view
 	 */
 	static async refreshArticles() {
-		setLoading('articles', true);
-		setError('articles', null);
 
 		try {
 			const response = await articleApi.getAll();
@@ -214,7 +203,6 @@ export class ArticleService {
 			setError('articles', 'Failed to refresh articles');
 			throw error;
 		} finally {
-			setLoading('articles', false);
 		}
 	}
 

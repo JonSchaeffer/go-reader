@@ -55,17 +55,6 @@ export const preferences = writable({
 	showReadArticles: true
 });
 
-/**
- * Helper functions for managing loading states
- */
-export const setLoading = (key, value) => {
-	loading.update(state => ({ ...state, [key]: value }));
-};
-
-export const setError = (key, value) => {
-	errors.update(state => ({ ...state, [key]: value }));
-};
-
 export const clearErrors = () => {
 	errors.set({ feeds: null, articles: null, categories: null, general: null });
 };
