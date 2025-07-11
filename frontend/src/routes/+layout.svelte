@@ -16,12 +16,14 @@
 		// Load theme from localStorage (theme should already be applied by app.html script)
 		if (browser) {
 			const savedTheme = localStorage.getItem('theme') || 'light';
+
 			theme = savedTheme;
 			// Ensure theme is properly applied even if app.html script failed
 			document.documentElement.setAttribute('data-theme', savedTheme);
-			
+
 			// Load collapsed categories from localStorage
 			const collapsed = localStorage.getItem('collapsedCategories');
+
 			if (collapsed) {
 				collapsedCategories = new Set(JSON.parse(collapsed));
 			}
@@ -30,9 +32,11 @@
 			document.addEventListener('visibilitychange', () => {
 				if (!document.hidden) {
 					const currentTheme = localStorage.getItem('theme') || 'light';
+
 					if (currentTheme !== theme) {
 						theme = currentTheme;
 					}
+
 					document.documentElement.setAttribute('data-theme', theme);
 				}
 			});
@@ -40,10 +44,7 @@
 
 		// Load feeds and categories data
 		try {
-			await Promise.all([
-				FeedService.loadFeeds(),
-				CategoryService.loadCategories()
-			]);
+			await Promise.all([FeedService.loadFeeds(), CategoryService.loadCategories()]);
 		} catch (error) {
 			console.error('Failed to load sidebar data:', error);
 		}
@@ -56,7 +57,7 @@
 
 	function toggleTheme() {
 		theme = theme === 'light' ? 'dark' : 'light';
-		
+
 		if (browser) {
 			document.documentElement.setAttribute('data-theme', theme);
 			localStorage.setItem('theme', theme);
@@ -73,8 +74,9 @@
 		} else {
 			collapsedCategories.add(categoryId);
 		}
+
 		collapsedCategories = collapsedCategories; // Trigger reactivity
-		
+
 		// Save to localStorage
 		if (browser) {
 			localStorage.setItem('collapsedCategories', JSON.stringify([...collapsedCategories]));
@@ -83,21 +85,15 @@
 
 	// Group feeds by category
 	$: groupedFeeds = (() => {
-		const grouped = {
-			uncategorized: [],
-			categories: {}
-		};
+		const grouped = { uncategorized: [], categories: {} };
 
 		// Initialize categories
-		$categories.forEach(category => {
-			grouped.categories[category.ID] = {
-				...category,
-				feeds: []
-			};
+		$categories.forEach((category) => {
+			grouped.categories[category.ID] = { ...category, feeds: [] };
 		});
 
 		// Group feeds
-		$feeds.forEach(feed => {
+		$feeds.forEach((feed) => {
 			if (feed.CategoryID && grouped.categories[feed.CategoryID]) {
 				grouped.categories[feed.CategoryID].feeds.push(feed);
 			} else {
@@ -148,15 +144,14 @@
 	];
 
 	// Create computed nav items with active states
-	$: navItemsWithActive = navItems.map(section => ({
+	$: navItemsWithActive = navItems.map((section) => ({
 		...section,
-		items: section.items.map(item => ({
+		items: section.items.map((item) => ({
 			...item,
 			active: $page.url.pathname.startsWith(item.href) && item.href !== '/' || 
 					(item.href === '/articles' && $page.url.pathname === '/')
 		}))
 	}));
-
 </script>
 
 <svelte:head>
@@ -173,16 +168,12 @@
 		
 		<div class="header-actions">
 			<!-- Mobile menu toggle -->
-			<button 
-				class="btn-ghost md:hidden"
-				on:click={toggleSidebar}
-				aria-label="Toggle sidebar"
-			>
+			<button class="btn-ghost md:hidden" on:click={toggleSidebar} aria-label="Toggle sidebar">
 				☰
 			</button>
-			
+
 			<!-- Theme toggle -->
-			<button 
+			<button
 				class="theme-toggle"
 				on:click={toggleTheme}
 				aria-label="Toggle theme"
@@ -198,7 +189,7 @@
 		<div class="sidebar-header">
 			<h2 class="sidebar-title">Navigation</h2>
 		</div>
-		
+
 		<nav class="sidebar-nav">
 			{#each navItemsWithActive as section}
 				<div class="nav-section">
@@ -209,7 +200,7 @@
 								<a
 									href={item.disabled ? '#' : item.href}
 									class="nav-link {item.active ? 'active' : ''} {item.disabled ? 'disabled' : ''}"
-									on:click={() => sidebarOpen = false}
+									on:click={() => (sidebarOpen = false)}
 								>
 									<span class="nav-icon">{item.icon}</span>
 									<span class="nav-text">{item.label}</span>
@@ -258,10 +249,10 @@
 									<ul class="feed-list">
 										{#each category.feeds as feed}
 											<li class="feed-item">
-												<a 
-													href="/articles?feed={feed.ID}" 
+												<a
+													href="/articles?feed={feed.ID}"
 													class="feed-link"
-													on:click={() => sidebarOpen = false}
+													on:click={() => (sidebarOpen = false)}
 												>
 													<span class="feed-icon">📡</span>
 													<span class="feed-name">{feed.Title || 'Untitled Feed'}</span>
@@ -299,10 +290,10 @@
 								<ul class="feed-list">
 									{#each groupedFeeds.uncategorized as feed}
 										<li class="feed-item">
-											<a 
-												href="/articles?feed={feed.ID}" 
+											<a
+												href="/articles?feed={feed.ID}"
 												class="feed-link"
-												on:click={() => sidebarOpen = false}
+												on:click={() => (sidebarOpen = false)}
 											>
 												<span class="feed-icon">📡</span>
 												<span class="feed-name">{feed.Title || 'Untitled Feed'}</span>
@@ -326,8 +317,8 @@
 
 <!-- Mobile sidebar backdrop -->
 {#if sidebarOpen}
-	<button 
-		class="fixed inset-0 bg-black bg-opacity-50 z-10 md:hidden backdrop-button"
+	<button
+		class="bg-opacity-50 backdrop-button fixed inset-0 z-10 bg-black md:hidden"
 		on:click={toggleSidebar}
 		aria-label="Close sidebar"
 	></button>
@@ -340,26 +331,26 @@
 			display: none;
 		}
 	}
-	
+
 	.fixed {
 		position: fixed;
 	}
-	
+
 	.inset-0 {
 		top: 0;
 		right: 0;
 		bottom: 0;
 		left: 0;
 	}
-	
+
 	.bg-black {
 		background-color: rgb(0 0 0);
 	}
-	
+
 	.bg-opacity-50 {
 		background-color: rgb(0 0 0 / 0.5);
 	}
-	
+
 	.z-10 {
 		z-index: 10;
 	}
