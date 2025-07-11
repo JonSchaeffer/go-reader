@@ -1,5 +1,5 @@
 import { rssApi } from '../api.js';
-import { feeds, setLoading, setError } from '../stores.js';
+import { feeds } from '../stores.js';
 
 /**
  * Service for managing RSS feeds with state management
@@ -9,8 +9,6 @@ export class FeedService {
 	 * Load all RSS feeds
 	 */
 	static async loadFeeds() {
-		setLoading('feeds', true);
-		setError('feeds', null);
 
 		try {
 			const response = await rssApi.getAll();
@@ -35,10 +33,7 @@ export class FeedService {
 			return feedList;
 		} catch (error) {
 			console.error('Failed to load feeds:', error);
-			setError('feeds', 'Failed to load RSS feeds. Please check if the backend is running.');
 			throw error;
-		} finally {
-			setLoading('feeds', false);
 		}
 	}
 
@@ -49,9 +44,6 @@ export class FeedService {
 		if (!url || !url.trim()) {
 			throw new Error('Please enter a valid RSS URL');
 		}
-
-		setLoading('adding', true);
-		setError('feeds', null);
 
 		try {
 			const response = await rssApi.create(url.trim());
@@ -66,10 +58,7 @@ export class FeedService {
 			const errorMessage = error.message.includes('HTTP') 
 				? 'Failed to add RSS feed. Please check the URL and try again.'
 				: error.message;
-			setError('feeds', errorMessage);
 			throw error;
-		} finally {
-			setLoading('adding', false);
 		}
 	}
 
@@ -77,8 +66,6 @@ export class FeedService {
 	 * Delete an RSS feed
 	 */
 	static async deleteFeed(feedId, feedTitle = 'this feed') {
-		setLoading('deleting', true);
-		setError('feeds', null);
 
 		try {
 			await rssApi.delete(feedId);
@@ -92,10 +79,7 @@ export class FeedService {
 			return true;
 		} catch (error) {
 			console.error('Failed to delete feed:', error);
-			setError('feeds', `Failed to delete ${feedTitle}`);
 			throw error;
-		} finally {
-			setLoading('deleting', false);
 		}
 	}
 

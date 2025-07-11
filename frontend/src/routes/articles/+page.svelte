@@ -153,8 +153,8 @@
 	}
 
 	async function markAllAsRead() {
-		const unreadArticles = $articles.filter(article => !article.Read);
-		
+		const unreadArticles = $articles.filter((article) => !article.Read);
+
 		if (unreadArticles.length === 0) {
 			return; // No unread articles
 		}
@@ -165,10 +165,10 @@
 
 		try {
 			// Update all unread articles to read status
-			const updatePromises = unreadArticles.map(article => 
+			const updatePromises = unreadArticles.map((article) =>
 				ArticleService.toggleReadStatus(article.ID, article.Read)
 			);
-			
+
 			await Promise.all(updatePromises);
 		} catch (error) {
 			console.error('Failed to mark all articles as read:', error);
@@ -236,16 +236,17 @@
 	// Filter articles based on search term and read status
 	$: filteredArticles = $articles.filter((article) => {
 		// Search filter
-		const matchesSearch = !searchTerm || 
+		const matchesSearch =
+			!searchTerm ||
 			decodeHtml(article.Title)?.toLowerCase().includes(searchTerm.toLowerCase()) ||
 			decodeHtml(article.Description)?.toLowerCase().includes(searchTerm.toLowerCase());
-		
+
 		// Read status filter
-		const matchesReadFilter = 
-			readFilter === 'all' || 
+		const matchesReadFilter =
+			readFilter === 'all' ||
 			(readFilter === 'unread' && !article.Read) ||
 			(readFilter === 'read' && article.Read);
-		
+
 		return matchesSearch && matchesReadFilter;
 	});
 </script>
@@ -262,7 +263,10 @@
 		<p style="color: var(--text-secondary); margin-top: 0.5rem;">
 			{#if feedId}
 				Showing articles from <strong>{getFeedName(parseInt(feedId))}</strong> ({$articles.length} articles)
-				<a href="/articles" style="color: var(--primary); margin-left: 0.5rem; text-decoration: none;">
+				<a
+					href="/articles"
+					style="color: var(--primary); margin-left: 0.5rem; text-decoration: none;"
+				>
 					← Show all feeds
 				</a>
 			{:else}
@@ -294,33 +298,33 @@
 		<div class="filter-bar">
 			<div class="filter-group">
 				<span class="filter-label">Show:</span>
-				<button 
+				<button
 					class="filter-btn {readFilter === 'all' ? 'active' : ''}"
-					on:click={() => readFilter = 'all'}
+					on:click={() => (readFilter = 'all')}
 				>
 					All ({$articles.length})
 				</button>
-				<button 
+				<button
 					class="filter-btn {readFilter === 'unread' ? 'active' : ''}"
-					on:click={() => readFilter = 'unread'}
+					on:click={() => (readFilter = 'unread')}
 				>
-					📕 Unread ({$articles.filter(a => !a.Read).length})
+					📕 Unread ({$articles.filter((a) => !a.Read).length})
 				</button>
-				<button 
+				<button
 					class="filter-btn {readFilter === 'read' ? 'active' : ''}"
-					on:click={() => readFilter = 'read'}
+					on:click={() => (readFilter = 'read')}
 				>
-					📖 Read ({$articles.filter(a => a.Read).length})
+					📖 Read ({$articles.filter((a) => a.Read).length})
 				</button>
-				
+
 				<!-- Separator -->
 				<div class="filter-separator"></div>
-				
+
 				<!-- Bulk Actions -->
-				<button 
+				<button
 					class="bulk-action-btn"
 					on:click={markAllAsRead}
-					disabled={$articles.filter(a => !a.Read).length === 0 || $loading.articles}
+					disabled={$articles.filter((a) => !a.Read).length === 0 || $loading.articles}
 					title="Mark all unread articles as read"
 				>
 					{#if $loading.articles}
@@ -329,9 +333,9 @@
 						✓ Mark All Read
 					{/if}
 				</button>
-				
+
 				<!-- Refresh Button -->
-				<button 
+				<button
 					class="refresh-btn"
 					on:click={refreshArticles}
 					disabled={isRefreshing}
@@ -394,7 +398,7 @@
 					</button>
 
 					<!-- Feed Source -->
-					<button 
+					<button
 						class="feed-source clickable"
 						on:click={(e) => filterByFeed(article.RssID, e)}
 						title="Filter articles from {getFeedName(article.RssID)}"
@@ -568,22 +572,6 @@
 		cursor: not-allowed;
 		border-color: var(--border);
 		color: var(--text-tertiary);
-	}
-
-	/* State Styles */
-	.loading-state,
-	.error-state,
-	.empty-state {
-		text-align: center;
-		padding: 4rem 2rem;
-		color: var(--text-secondary);
-	}
-
-	.loading-spinner,
-	.error-icon,
-	.empty-icon {
-		font-size: 3rem;
-		margin-bottom: 1rem;
 	}
 
 	.error-state h3,
@@ -792,4 +780,3 @@
 		}
 	}
 </style>
-
