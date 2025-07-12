@@ -327,7 +327,7 @@ func DeleteRSSbyID(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetRSSFiveURL(RSSUrl string) string {
-	return fmt.Sprintf("http://fullfeedrss:80/makefulltextfeed.php?url=%s&max=4&links=preserve", RSSUrl)
+	return fmt.Sprintf("http://fivefilters:8081/makefulltextfeed.php?url=%s&max=4&links=preserve", RSSUrl)
 }
 
 func SaveRSSArticles(FeedURL string, FeedID int) {
