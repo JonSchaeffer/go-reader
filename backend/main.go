@@ -44,7 +44,7 @@ func corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
 func main() {
 	// Load configuration
 	cfg := config.Load()
-	
+
 	// Initialize database
 	err := db.Init(cfg.DatabaseURL)
 	if err != nil {
@@ -65,7 +65,7 @@ func main() {
 	// Set up HTTP routes with CORS middleware
 	http.HandleFunc("/api/rss", corsMiddleware(routeRss))
 	http.HandleFunc("/api/rss/stats", corsMiddleware(routeRSSStats))             // RSS feed statistics
-	http.HandleFunc("/api/categories", corsMiddleware(routeCategories))         // Category management
+	http.HandleFunc("/api/categories", corsMiddleware(routeCategories))          // Category management
 	http.HandleFunc("/api/articles", corsMiddleware(routeAllArticles))           // All articles
 	http.HandleFunc("/api/articles/single", corsMiddleware(routeSingleArticle))  // Single article by ?id=
 	http.HandleFunc("/api/articles/by-rss", corsMiddleware(routeArticlesByRSS))  // Articles by RSS ID
@@ -90,8 +90,10 @@ func main() {
 	}()
 
 	// Set config for RSS package
-	rss.SetConfig(cfg)
-	
+	rss.SetConfig(&rss.Config{
+		FiveFiltersURL: cfg.FiveFiltersURL,
+	})
+
 	// Start HTTP server (this blocks)
 	fmt.Printf("Server starting on :%s\n", cfg.Port)
 	if err := http.ListenAndServe(":"+cfg.Port, nil); err != nil {

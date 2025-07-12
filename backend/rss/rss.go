@@ -22,11 +22,9 @@ type Config struct {
 }
 
 // SetConfig sets the global configuration for the RSS package
-func SetConfig(cfg interface{}) {
-	if c, ok := cfg.(interface {
-		FiveFiltersURL string
-	}); ok {
-		config.FiveFiltersURL = c.FiveFiltersURL
+func SetConfig(cfg *Config) {
+	if cfg != nil {
+		config.FiveFiltersURL = cfg.FiveFiltersURL
 	}
 }
 
