@@ -14,6 +14,20 @@ import (
 	"github.com/JonSchaeffer/go-reader/db"
 )
 
+// Global config variable
+var config Config
+
+type Config struct {
+	FiveFiltersURL string
+}
+
+// SetConfig sets the global configuration for the RSS package
+func SetConfig(cfg *Config) {
+	if cfg != nil {
+		config.FiveFiltersURL = cfg.FiveFiltersURL
+	}
+}
+
 type RSSEntry struct {
 	ID  int    `json:"id"`
 	URL string `json:"url"`
@@ -327,7 +341,7 @@ func DeleteRSSbyID(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetRSSFiveURL(RSSUrl string) string {
-	return fmt.Sprintf("http://fullfeedrss:80/makefulltextfeed.php?url=%s&max=4&links=preserve", RSSUrl)
+	return fmt.Sprintf("%s/makefulltextfeed.php?url=%s&max=4&links=preserve", config.FiveFiltersURL, RSSUrl)
 }
 
 func SaveRSSArticles(FeedURL string, FeedID int) {

@@ -51,7 +51,7 @@ func CreateRSSTable() error {
 		return err
 	}
 
-	// Create table without foreign key constraint first
+	// Create table with categoryID column
 	query := `
 	CREATE TABLE IF NOT EXISTS rss (
 	id SERIAL PRIMARY KEY,
@@ -61,10 +61,16 @@ func CreateRSSTable() error {
 	description TEXT,
 	feedSize INT,
 	sync INT,
+	categoryID INT,
 	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 	updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
-	CONSTRAINT unique_rss_url UNIQUE (url)
+	CONSTRAINT unique_rss_url UNIQUE (url),
+	CONSTRAINT fk_rss_category 
+		FOREIGN KEY (categoryID) 
+		REFERENCES category(id) 
+		ON DELETE SET NULL 
+		ON UPDATE CASCADE
 	)`
 	_, err := DB.Exec(context.Background(), query)
 	if err != nil {

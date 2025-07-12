@@ -17,6 +17,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/JonSchaeffer/go-reader/config"
 	"github.com/JonSchaeffer/go-reader/db"
 	"github.com/JonSchaeffer/go-reader/rss"
 )
@@ -41,8 +42,11 @@ func corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
 }
 
 func main() {
+	// Load configuration
+	cfg := config.Load()
+
 	// Initialize database
-	err := db.Init("postgres://postgres:postgres@postgres:5432")
+	err := db.Init(cfg.DatabaseURL)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -61,7 +65,7 @@ func main() {
 	// Set up HTTP routes with CORS middleware
 	http.HandleFunc("/api/rss", corsMiddleware(routeRss))
 	http.HandleFunc("/api/rss/stats", corsMiddleware(routeRSSStats))             // RSS feed statistics
-	http.HandleFunc("/api/categories", corsMiddleware(routeCategories))         // Category management
+	http.HandleFunc("/api/categories", corsMiddleware(routeCategories))          // Category management
 	http.HandleFunc("/api/articles", corsMiddleware(routeAllArticles))           // All articles
 	http.HandleFunc("/api/articles/single", corsMiddleware(routeSingleArticle))  // Single article by ?id=
 	http.HandleFunc("/api/articles/by-rss", corsMiddleware(routeArticlesByRSS))  // Articles by RSS ID
@@ -85,9 +89,14 @@ func main() {
 		os.Exit(0)
 	}()
 
+	// Set config for RSS package
+	rss.SetConfig(&rss.Config{
+		FiveFiltersURL: cfg.FiveFiltersURL,
+	})
+
 	// Start HTTP server (this blocks)
-	fmt.Println("Server starting on :8080")
-	if err := http.ListenAndServe(":8080", nil); err != nil {
+	fmt.Printf("Server starting on :%s\n", cfg.Port)
+	if err := http.ListenAndServe(":"+cfg.Port, nil); err != nil {
 		log.Printf("Server failed to start: %v", err)
 	}
 }

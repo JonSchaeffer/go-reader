@@ -1,0 +1,40 @@
+# Load Tilt Extensions
+load('ext://configmap', 'configmap_create')
+load('ext://helm_resource', 'helm_resource', 'helm_repo')
+load('ext://namespace', 'namespace_create', 'namespace_inject')
+
+# Create relevant namespaces
+namespace_create('go-reader')
+
+# Load Kubernetes manifest
+#k8s_yaml("manifests/ingress.yaml")
+
+# Create golang backend
+docker_build('backend', '../backend', dockerfile='../backend/Dockerfile-dev')
+k8s_yaml('backend/deployment.yaml')
+k8s_resource('backend', port_forwards=['0.0.0.0:8000:8080'])
+
+# Create svelte frontend
+docker_build('frontend', '../frontend', dockerfile='../frontend/Dockerfile')
+k8s_yaml('frontend/deployment.yaml')
+k8s_resource('frontend', port_forwards=['0.0.0.0:3000:3000'])
+
+k8s_yaml(blob("""
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-secret
+  namespace: go-reader
+type: Opaque
+data:
+  username: cG9zdGdyZXM=  # postgres (base64)
+  password: cG9zdGdyZXM=  # postgres (base64)
+"""))
+
+# Deploy postgres
+k8s_yaml('backend/postgres.yaml')
+k8s_resource('postgres', port_forwards='5432:5432')
+
+# Deploy FiveFilters
+k8s_yaml('backend/fivefilters.yaml')
+k8s_resource('fivefilters', port_forwards='8081:8081')
