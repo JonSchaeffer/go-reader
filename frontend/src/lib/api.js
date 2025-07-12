@@ -3,7 +3,7 @@
  */
 
 // Use environment variable or fallback to localhost
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8080/api';
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://backend:8080/api';
 
 /**
  * Generic API request function with error handling

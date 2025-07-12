@@ -11,6 +11,13 @@ RUN npm install
 # Copy source code
 COPY . .
 
+# Create necessary directories and set proper ownership
+RUN mkdir -p .svelte-kit tmp /tmp/vite-cache && \
+  chown -R node:node /app /tmp/vite-cache
+
+# Switch to node user
+USER node
+
 # Expose port
 EXPOSE 3000
 

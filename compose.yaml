@@ -12,7 +12,7 @@ services:
       - go-reader
   go-reader:
     build:
-      context: .
+      context: ./backend
       dockerfile: Dockerfile-dev
     ports:
       - "8080:8080"
