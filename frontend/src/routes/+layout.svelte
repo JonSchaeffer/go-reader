@@ -225,22 +225,33 @@
 			<!-- Feeds by Category -->
 			{#if $feeds.length > 0}
 				<div class="nav-section">
-					<h3 class="nav-section-title">My Feeds</h3>
+					<h3 class="nav-section-title">
+						<a href="/articles" class="feeds-title-link" on:click={() => sidebarOpen = false}>
+							My Feeds
+						</a>
+					</h3>
 					
 					<!-- Categorized Feeds -->
 					{#each Object.values(groupedFeeds.categories) as category}
 						{#if category.feeds.length > 0}
 							<div class="category-group">
-								<button 
-									class="category-header"
-									on:click={() => toggleCategory(category.ID)}
-								>
-									<span class="category-icon" style="background-color: {category.Color}">📁</span>
-									<span class="category-name">{category.Name}</span>
-									<span class="category-toggle {collapsedCategories.has(category.ID) ? 'collapsed' : ''}">
+								<div class="category-header">
+									<a 
+										href="/articles?category={category.ID}"
+										class="category-link"
+										on:click={() => sidebarOpen = false}
+									>
+										<span class="category-icon" style="background-color: {category.Color}">📁</span>
+										<span class="category-name">{category.Name}</span>
+									</a>
+									<button 
+										class="category-toggle {collapsedCategories.has(category.ID) ? 'collapsed' : ''}"
+										on:click={() => toggleCategory(category.ID)}
+										title="Toggle category"
+									>
 										{collapsedCategories.has(category.ID) ? '▶' : '▼'}
-									</span>
-								</button>
+									</button>
+								</div>
 								
 								{#if !collapsedCategories.has(category.ID)}
 									<ul class="feed-list">
@@ -265,16 +276,23 @@
 					<!-- Uncategorized Feeds -->
 					{#if groupedFeeds.uncategorized.length > 0}
 						<div class="category-group">
-							<button 
-								class="category-header"
-								on:click={() => toggleCategory('uncategorized')}
-							>
-								<span class="category-icon">📂</span>
-								<span class="category-name">Uncategorized</span>
-								<span class="category-toggle {collapsedCategories.has('uncategorized') ? 'collapsed' : ''}">
+							<div class="category-header">
+								<a 
+									href="/articles?category=null"
+									class="category-link"
+									on:click={() => sidebarOpen = false}
+								>
+									<span class="category-icon">📂</span>
+									<span class="category-name">Uncategorized</span>
+								</a>
+								<button 
+									class="category-toggle {collapsedCategories.has('uncategorized') ? 'collapsed' : ''}"
+									on:click={() => toggleCategory('uncategorized')}
+									title="Toggle category"
+								>
 									{collapsedCategories.has('uncategorized') ? '▶' : '▼'}
-								</span>
-							</button>
+								</button>
+							</div>
 							
 							{#if !collapsedCategories.has('uncategorized')}
 								<ul class="feed-list">
@@ -354,21 +372,31 @@
 		width: 100%;
 		display: flex;
 		align-items: center;
+		justify-content: space-between;
+		padding: 0.25rem 0.75rem;
+		border-radius: var(--radius);
+		transition: all 0.15s ease;
+	}
+
+	.category-link {
+		display: flex;
+		align-items: center;
 		gap: 0.5rem;
-		padding: 0.5rem 0.75rem;
-		background: none;
-		border: none;
+		padding: 0.25rem 0;
 		color: var(--text-secondary);
 		font-size: 0.875rem;
 		font-weight: 500;
-		cursor: pointer;
-		transition: all 0.15s ease;
-		border-radius: var(--radius);
+		text-decoration: none;
+		flex-grow: 1;
+		transition: color 0.15s ease;
+	}
+
+	.category-link:hover {
+		color: var(--text-primary);
 	}
 
 	.category-header:hover {
 		background: var(--bg-tertiary);
-		color: var(--text-primary);
 	}
 
 	.category-icon {
@@ -391,9 +419,20 @@
 	}
 
 	.category-toggle {
+		background: none;
+		border: none;
+		color: var(--text-tertiary);
 		font-size: 0.75rem;
-		transition: transform 0.15s ease;
+		padding: 0.25rem;
+		cursor: pointer;
+		transition: transform 0.15s ease, color 0.15s ease;
 		flex-shrink: 0;
+		border-radius: var(--radius-sm);
+	}
+
+	.category-toggle:hover {
+		color: var(--text-primary);
+		background: var(--bg-secondary);
 	}
 
 	.category-toggle.collapsed {
@@ -444,5 +483,16 @@
 	.feed-link.active {
 		background: var(--primary-light);
 		color: var(--primary);
+	}
+
+	/* Feeds title link */
+	.feeds-title-link {
+		color: inherit;
+		text-decoration: none;
+		transition: color 0.15s ease;
+	}
+
+	.feeds-title-link:hover {
+		color: var(--text-primary);
 	}
 </style>

@@ -4,9 +4,11 @@
 	import { afterNavigate } from '$app/navigation';
 	import { ArticleService } from '$lib/services/articleService.js';
 	import { FeedService } from '$lib/services/feedService.js';
-	import { articles, feeds, loading, errors } from '$lib/stores.js';
+	import { CategoryService } from '$lib/services/categoryService.js';
+	import { articles, feeds, categories, loading, errors } from '$lib/stores.js';
 
 	let feedId = null;
+	let categoryId = null;
 	let searchTerm = '';
 	let readFilter = 'all'; // 'all', 'unread', 'read'
 	let refreshInterval = null;
@@ -85,12 +87,17 @@
 		console.log('Loading articles data...');
 		hasAttemptedLoad = true;
 		try {
-			// Check if we have a feed filter from URL params
+			// Check if we have filters from URL params
 			feedId = $page.url.searchParams.get('feed');
+			categoryId = $page.url.searchParams.get('category');
 			console.log('Feed ID from URL:', feedId);
+			console.log('Category ID from URL:', categoryId);
 
-			// Load feeds data for feed names
-			await FeedService.loadFeeds();
+			// Load feeds and categories data
+			await Promise.all([
+				FeedService.loadFeeds(),
+				CategoryService.loadCategories()
+			]);
 
 			if (feedId) {
 				await ArticleService.loadArticlesByFeed(feedId);
@@ -225,15 +232,30 @@
 
 	afterNavigate((navigation) => {
 		console.log('Navigated to articles page');
-		// Only reload if we're navigating from outside the articles section
-		// or if URL parameters have changed (like feed filter)
+		// Check if URL parameters have changed
 		const currentFeedId = $page.url.searchParams.get('feed');
-		if (currentFeedId !== feedId || (!$articles.length && !hasAttemptedLoad)) {
+		const currentCategoryId = $page.url.searchParams.get('category');
+		
+		if (currentFeedId !== feedId || currentCategoryId !== categoryId || (!$articles.length && !hasAttemptedLoad)) {
 			loadData();
 		}
 	});
 
-	// Filter articles based on search term and read status
+	// React to URL parameter changes for real-time filtering
+	$: {
+		const urlFeedId = $page.url.searchParams.get('feed');
+		const urlCategoryId = $page.url.searchParams.get('category');
+		
+		// Update local variables when URL changes
+		if (urlFeedId !== feedId) {
+			feedId = urlFeedId;
+		}
+		if (urlCategoryId !== categoryId) {
+			categoryId = urlCategoryId;
+		}
+	}
+
+	// Filter articles based on search term, read status, and category
 	$: filteredArticles = $articles.filter((article) => {
 		// Search filter
 		const matchesSearch = !searchTerm || 
@@ -246,7 +268,20 @@
 			(readFilter === 'unread' && !article.Read) ||
 			(readFilter === 'read' && article.Read);
 		
-		return matchesSearch && matchesReadFilter;
+		// Category filter - find the feed that owns this article and check its category
+		const matchesCategory = !categoryId || (() => {
+			const feed = $feeds.find(f => f.ID === article.RssID);
+			if (!feed) return false;
+			
+			// Handle "uncategorized" filter (null categoryId in URL becomes string 'null')
+			if (categoryId === 'null' || categoryId === '') {
+				return !feed.CategoryID;
+			}
+			
+			return feed.CategoryID === parseInt(categoryId);
+		})();
+		
+		return matchesSearch && matchesReadFilter && matchesCategory;
 	});
 </script>
 

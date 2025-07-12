@@ -17,7 +17,7 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ./:/app
+      - ./backend:/app
   fullfeedrss:
     image: "heussd/fivefilters-full-text-rss:latest"
     environment:
