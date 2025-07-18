@@ -26,6 +26,9 @@
 	// Article counts for totals
 	let totalUnreadCount = 0;
 	let totalReadCount = 0;
+	
+	// Scroll tracking for auto-load
+	let lastScrollY = 0;
 
 	// Function to decode HTML entities
 	function decodeHtml(html) {
@@ -100,6 +103,7 @@
 	function handleScroll() {
 		if (typeof window === 'undefined') return;
 		
+		// Auto-load more articles
 		if (isLoadingMore || !hasMore || feedId) {
 			return;
 		}
@@ -113,6 +117,7 @@
 			loadMoreArticles();
 		}
 	}
+
 
 	// Alternative approach: Intersection Observer
 	let observer;
@@ -364,7 +369,7 @@
 	onDestroy(() => {
 		stopAutoRefresh();
 		
-		// Remove scroll listener (browser only)
+		// Remove event listeners (browser only)
 		if (typeof window !== 'undefined') {
 			window.removeEventListener('scroll', handleScroll);
 		}
@@ -434,23 +439,7 @@
 	<title>Articles - RSS Reader</title>
 </svelte:head>
 
-<div class="content-header">
-	<div>
-		<h1 style="font-size: 1.875rem; font-weight: 700; color: var(--text-primary);">
-			Articles {feedId ? '(Filtered)' : ''}
-		</h1>
-		<p style="color: var(--text-secondary); margin-top: 0.5rem;">
-			{#if feedId}
-				Showing articles from <strong>{getFeedName(parseInt(feedId))}</strong> ({$articles.length} articles)
-				<a href="/articles" style="color: var(--primary); margin-left: 0.5rem; text-decoration: none;">
-					← Show all feeds
-				</a>
-			{:else}
-				Browse all articles from your RSS feeds ({$articles.length} articles)
-			{/if}
-		</p>
-	</div>
-</div>
+<!-- Articles header removed for mobile - info now in filter bar -->
 
 <div class="content-body">
 	<!-- Search Bar -->
@@ -472,6 +461,13 @@
 
 		<!-- Filter Buttons -->
 		<div class="filter-bar">
+			{#if feedId}
+				<div class="feed-info">
+					<span class="feed-name">📡 {getFeedName(parseInt(feedId))}</span>
+					<a href="/articles" class="clear-filter">← All Articles</a>
+				</div>
+			{/if}
+			
 			<div class="filter-group">
 				<span class="filter-label">Show:</span>
 				<button 
@@ -523,7 +519,6 @@
 						🔄 Refresh
 					{/if}
 				</button>
-				
 			</div>
 		</div>
 	{/if}
@@ -621,6 +616,33 @@
 </div>
 
 <style>
+	/* Feed Info in Filter Bar */
+	.feed-info {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0.5rem;
+		background: var(--bg-tertiary);
+		border-radius: var(--radius);
+		margin-bottom: 0.5rem;
+	}
+
+	.feed-name {
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: var(--text-primary);
+	}
+
+	.clear-filter {
+		color: var(--primary);
+		text-decoration: none;
+		font-size: 0.8125rem;
+	}
+
+	.clear-filter:hover {
+		text-decoration: underline;
+	}
+
 	/* Search Bar */
 	.search-bar {
 		margin-bottom: 1.5rem;
@@ -663,16 +685,50 @@
 		color: var(--text-tertiary);
 	}
 
+	/* Desktop search adjustments */
+	@media (min-width: 769px) {
+		.search-bar {
+			max-width: 100%;
+		}
+	}
+
 	/* Filter Bar */
 	.filter-bar {
 		margin-bottom: 1.5rem;
 	}
+
 
 	.filter-group {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
 		flex-wrap: wrap;
+	}
+
+	.filter-row {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+	}
+
+	.filter-buttons {
+		display: flex;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+	}
+
+	.action-row {
+		display: flex;
+		gap: 0.5rem;
+		align-items: center;
+	}
+
+	.filter-separator {
+		width: 1px;
+		height: 2rem;
+		background: var(--border);
+		margin: 0 0.5rem;
 	}
 
 	.filter-label {
@@ -966,25 +1022,101 @@
 		background: transparent;
 	}
 
-	/* Responsive */
+	/* Desktop styles - normal layout */
+	@media (min-width: 769px) {
+		.search-bar {
+			position: static;
+			background: transparent;
+			padding: 0;
+			margin-bottom: 1.5rem;
+			border: none;
+		}
+
+		.filter-bar {
+			position: static;
+			background: transparent;
+			padding: 0;
+			margin-bottom: 1.5rem;
+			border: none;
+		}
+
+		.filter-group {
+			flex-direction: row;
+			align-items: center;
+			gap: 0.5rem;
+			flex-wrap: wrap;
+			padding: 0;
+		}
+
+		.filter-separator {
+			display: block;
+		}
+
+		.content-body {
+			padding-top: 0;
+		}
+	}
+
+	/* Mobile styles - optimized layout */
 	@media (max-width: 768px) {
+		.filter-bar {
+			position: fixed;
+			top: 60px; /* Account for main app header */
+			left: 0;
+			right: 0;
+			margin: 0;
+			z-index: 8; /* Below main header but above content */
+			background: var(--bg-primary);
+			border-bottom: 1px solid var(--border-light);
+			backdrop-filter: blur(10px);
+			-webkit-backdrop-filter: blur(10px);
+		}
+
 		.filter-group {
 			flex-direction: column;
-			align-items: stretch;
+			padding: 0.75rem 1rem;
 			gap: 0.75rem;
 		}
 
-		.filter-label {
-			margin-right: 0;
+		.filter-group > * {
+			width: 100%;
+		}
+
+		.filter-group > .filter-label {
+			margin-bottom: 0.25rem;
+		}
+
+		.filter-group > .filter-btn {
+			margin-bottom: 0.25rem;
+		}
+
+		.filter-group > .bulk-action-btn,
+		.filter-group > .refresh-btn {
+			margin-top: 0.25rem;
 		}
 
 		.filter-separator {
 			display: none;
 		}
 
-		.bulk-action-btn {
-			width: 100%;
-			justify-content: center;
+		.filter-btn {
+			font-size: 0.75rem;
+			padding: 0.375rem 0.5rem;
+		}
+
+		.bulk-action-btn,
+		.refresh-btn {
+			font-size: 0.75rem;
+			padding: 0.375rem 0.75rem;
+		}
+
+		/* Add top padding to content body to account for fixed filter bar */
+		.content-body {
+			padding-top: 160px; /* Main header + filter bar */
+		}
+
+		.search-bar {
+			margin-bottom: 1rem;
 		}
 
 		.article-row {

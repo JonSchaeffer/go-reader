@@ -152,7 +152,8 @@
 		...section,
 		items: section.items.map(item => ({
 			...item,
-			active: $page.url.pathname.startsWith(item.href) && item.href !== '/'
+			active: $page.url.pathname.startsWith(item.href) && item.href !== '/' || 
+					(item.href === '/articles' && $page.url.pathname === '/')
 		}))
 	}));
 
@@ -166,7 +167,7 @@
 <div class="app-container">
 	<!-- Header -->
 	<header class="header">
-		<a href="/" class="header-title">
+		<a href="/articles" class="header-title">
 			RSS Reader
 		</a>
 		

@@ -416,6 +416,9 @@
 		border: 1px solid var(--border);
 		border-radius: var(--radius);
 		overflow: hidden;
+		overflow-x: auto;
+		display: block;
+		white-space: nowrap;
 	}
 
 	.article-body :global(th),
@@ -428,6 +431,76 @@
 	.article-body :global(th) {
 		background: var(--bg-secondary);
 		font-weight: 600;
+	}
+
+	/* Mobile Content Overflow Fixes */
+	.article-body :global(*) {
+		/* Prevent any element from overflowing */
+		max-width: 100%;
+		box-sizing: border-box;
+	}
+
+	.article-body :global(div),
+	.article-body :global(span),
+	.article-body :global(p),
+	.article-body :global(article),
+	.article-body :global(section) {
+		/* Ensure text containers can wrap */
+		word-wrap: break-word;
+		word-break: break-word;
+		overflow-wrap: break-word;
+		hyphens: auto;
+	}
+
+	.article-body :global(iframe),
+	.article-body :global(video),
+	.article-body :global(embed),
+	.article-body :global(object) {
+		/* Responsive embeds */
+		max-width: 100%;
+		height: auto;
+	}
+
+	.article-body :global(pre) {
+		/* Scrollable code blocks */
+		white-space: pre;
+		word-wrap: normal;
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+
+	.article-body :global(code) {
+		/* Inline code wrapping */
+		word-break: break-all;
+		white-space: pre-wrap;
+	}
+
+	.article-body :global(a) {
+		/* Long URL wrapping */
+		word-break: break-all;
+		overflow-wrap: break-word;
+	}
+
+	/* Wide content containers */
+	.article-body :global(.wp-block-image),
+	.article-body :global(.wp-block-gallery),
+	.article-body :global(.wp-block-embed),
+	.article-body :global(.wp-block-video) {
+		max-width: 100%;
+		overflow: hidden;
+	}
+
+	/* Figure and image containers */
+	.article-body :global(figure) {
+		max-width: 100%;
+		margin: 1.5rem 0;
+		overflow: hidden;
+	}
+
+	.article-body :global(figure img) {
+		max-width: 100%;
+		height: auto;
+		width: auto;
 	}
 
 	/* State Styles */
@@ -461,6 +534,7 @@
 			flex-direction: column;
 			gap: 1rem;
 			align-items: stretch;
+			padding: 1rem;
 		}
 
 		.article-actions {
@@ -473,16 +547,93 @@
 
 		.article-title {
 			font-size: 1.75rem;
+			line-height: 1.3;
+			word-wrap: break-word;
+			overflow-wrap: break-word;
+			hyphens: auto;
 		}
 
 		.article-body {
 			font-size: 1rem;
+			/* Ensure the entire article body container prevents overflow */
+			overflow-x: hidden;
+			word-wrap: break-word;
 		}
 
 		.article-meta {
 			flex-direction: column;
 			align-items: flex-start;
 			gap: 0.5rem;
+		}
+
+		/* Mobile-specific content fixes */
+		.article-body :global(table) {
+			font-size: 0.875rem;
+			white-space: normal;
+		}
+
+		.article-body :global(th),
+		.article-body :global(td) {
+			padding: 0.5rem;
+			white-space: normal;
+		}
+
+		.article-body :global(pre) {
+			font-size: 0.75rem;
+			padding: 0.75rem;
+			margin: 1rem -0.5rem; /* Slightly extend pre blocks */
+		}
+
+		.article-body :global(blockquote) {
+			margin-left: 0;
+			margin-right: 0;
+			padding-left: 1rem;
+		}
+
+		.article-body :global(ul),
+		.article-body :global(ol) {
+			padding-left: 1.5rem;
+		}
+
+		.article-link a {
+			word-break: break-all;
+			font-size: 0.75rem;
+		}
+
+		/* Fix for very long words or URLs */
+		.article-body :global(h1),
+		.article-body :global(h2),
+		.article-body :global(h3),
+		.article-body :global(h4),
+		.article-body :global(h5),
+		.article-body :global(h6) {
+			word-wrap: break-word;
+			overflow-wrap: break-word;
+			hyphens: auto;
+		}
+	}
+
+	/* Extra small screens */
+	@media (max-width: 480px) {
+		.article-header {
+			padding: 0.75rem;
+		}
+
+		.article-content {
+			padding: 0.75rem;
+		}
+
+		.article-title {
+			font-size: 1.5rem;
+		}
+
+		.article-body {
+			font-size: 0.9rem;
+		}
+
+		.article-body :global(pre) {
+			font-size: 0.7rem;
+			margin: 1rem -0.25rem;
 		}
 	}
 </style>
