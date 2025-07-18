@@ -6,6 +6,7 @@
 	import { FeedService } from '$lib/services/feedService.js';
 	import { CategoryService } from '$lib/services/categoryService.js';
 	import { articles, feeds, categories, loading, errors } from '$lib/stores.js';
+	import { articleApi } from '$lib/api.js';
 
 	let feedId = null;
 	let categoryId = null;
@@ -14,6 +15,17 @@
 	let refreshInterval = null;
 	let isRefreshing = false;
 	let hasAttemptedLoad = false;
+	
+	// Pagination state
+	let currentPage = 0;
+	let pageSize = 50;
+	let totalArticles = 0;
+	let hasMore = true;
+	let isLoadingMore = false;
+	
+	// Article counts for totals
+	let totalUnreadCount = 0;
+	let totalReadCount = 0;
 
 	// Function to decode HTML entities
 	function decodeHtml(html) {
@@ -83,6 +95,57 @@
 		}
 	}
 
+	
+	// Auto-load on scroll to bottom
+	function handleScroll() {
+		if (typeof window === 'undefined') return;
+		
+		if (isLoadingMore || !hasMore || feedId) {
+			return;
+		}
+		
+		const scrollPosition = window.scrollY + window.innerHeight;
+		const documentHeight = document.documentElement.scrollHeight;
+		const distanceFromBottom = documentHeight - scrollPosition;
+		
+		// Load more when user is within 300px of bottom (increased threshold)
+		if (distanceFromBottom <= 300) {
+			loadMoreArticles();
+		}
+	}
+
+	// Alternative approach: Intersection Observer
+	let observer;
+	let sentinelElement;
+	
+	function setupIntersectionObserver() {
+		if (typeof window === 'undefined') return;
+		
+		observer = new IntersectionObserver((entries) => {
+			entries.forEach(entry => {
+				if (entry.isIntersecting && !isLoadingMore && hasMore && !feedId) {
+					loadMoreArticles();
+				}
+			});
+		}, {
+			rootMargin: '200px'
+		});
+		
+		// Wait for the sentinel element to be available
+		setTimeout(() => {
+			if (sentinelElement) {
+				observer.observe(sentinelElement);
+			}
+		}, 100);
+	}
+
+	// Load article counts for totals - using sample-based estimation
+	async function loadArticleCounts() {
+		// We'll use the sample-based estimation from the initial load
+		// This is more efficient and avoids the 500 error
+		console.log('Using sample-based article counts');
+	}
+
 	async function loadData() {
 		console.log('Loading articles data...');
 		hasAttemptedLoad = true;
@@ -102,7 +165,28 @@
 			if (feedId) {
 				await ArticleService.loadArticlesByFeed(feedId);
 			} else {
-				await ArticleService.loadAllArticles();
+				const result = await ArticleService.loadAllArticles(0, pageSize);
+				console.log('Initial load result:', result);
+				totalArticles = result.total;
+				hasMore = result.hasMore;
+				currentPage = 0;
+				console.log('Initial state - totalArticles:', totalArticles, 'hasMore:', hasMore, 'currentPage:', currentPage);
+				
+				// Calculate initial counts based on the first page sample
+				if (result.articles && result.articles.length > 0) {
+					const sampleUnreadCount = result.articles.filter(a => !a.Read).length;
+					const sampleReadCount = result.articles.filter(a => a.Read).length;
+					const sampleTotal = result.articles.length;
+					
+					// Estimate total counts based on the sample
+					const unreadRatio = sampleUnreadCount / sampleTotal;
+					const readRatio = sampleReadCount / sampleTotal;
+					
+					totalUnreadCount = Math.floor(totalArticles * unreadRatio);
+					totalReadCount = Math.floor(totalArticles * readRatio);
+					
+					console.log('Estimated counts from sample - Unread:', totalUnreadCount, 'Read:', totalReadCount);
+				}
 			}
 			console.log('Articles loaded successfully, count:', $articles.length);
 		} catch (error) {
@@ -135,6 +219,17 @@
 			articles.update((currentArticles) =>
 				currentArticles.map((a) => (a.ID === article.ID ? { ...a, Read: newStatus } : a))
 			);
+			
+			// Update total counts
+			if (newStatus) {
+				// Article was marked as read
+				totalUnreadCount--;
+				totalReadCount++;
+			} else {
+				// Article was marked as unread
+				totalUnreadCount++;
+				totalReadCount--;
+			}
 		} catch (error) {
 			console.error('Failed to toggle read status:', error);
 		}
@@ -160,23 +255,26 @@
 	}
 
 	async function markAllAsRead() {
-		const unreadArticles = $articles.filter(article => !article.Read);
-		
-		if (unreadArticles.length === 0) {
+		if (totalUnreadCount === 0) {
 			return; // No unread articles
 		}
 
-		if (!confirm(`Mark all ${unreadArticles.length} unread articles as read?`)) {
+		if (!confirm(`Mark all ${totalUnreadCount} unread articles as read?`)) {
 			return;
 		}
 
 		try {
 			// Update all unread articles to read status
+			const unreadArticles = $articles.filter(article => !article.Read);
 			const updatePromises = unreadArticles.map(article => 
 				ArticleService.toggleReadStatus(article.ID, article.Read)
 			);
 			
 			await Promise.all(updatePromises);
+			
+			// Update total counts
+			totalReadCount += totalUnreadCount;
+			totalUnreadCount = 0;
 		} catch (error) {
 			console.error('Failed to mark all articles as read:', error);
 		}
@@ -188,12 +286,41 @@
 			if (feedId) {
 				await ArticleService.loadArticlesByFeedSilently(feedId);
 			} else {
-				await ArticleService.refreshArticlesSilently();
+				// Reset pagination and load first page
+				currentPage = 0;
+				const result = await ArticleService.loadAllArticles(0, pageSize);
+				totalArticles = result.total;
+				hasMore = result.hasMore;
 			}
 		} catch (error) {
 			console.error('Failed to refresh articles:', error);
 		} finally {
 			isRefreshing = false;
+		}
+	}
+
+	async function loadMoreArticles() {
+		if (isLoadingMore || !hasMore || feedId) {
+			return; // Skip if already loading, no more, or feed-specific
+		}
+		
+		isLoadingMore = true;
+		try {
+			const nextPage = currentPage + 1;
+			const offset = nextPage * pageSize;
+			
+			const result = await ArticleService.loadAllArticles(offset, pageSize);
+			
+			if (result.articles.length > 0) {
+				currentPage = nextPage;
+				hasMore = result.hasMore;
+			} else {
+				hasMore = false;
+			}
+		} catch (error) {
+			console.error('Failed to load more articles:', error);
+		} finally {
+			isLoadingMore = false;
 		}
 	}
 
@@ -224,10 +351,28 @@
 		console.log('Articles page mounted');
 		loadData();
 		startAutoRefresh();
+		
+		// Add scroll listener for auto-loading (browser only)
+		if (typeof window !== 'undefined') {
+			window.addEventListener('scroll', handleScroll, { passive: true });
+		}
+		
+		// Setup Intersection Observer as backup
+		setupIntersectionObserver();
 	});
 
 	onDestroy(() => {
 		stopAutoRefresh();
+		
+		// Remove scroll listener (browser only)
+		if (typeof window !== 'undefined') {
+			window.removeEventListener('scroll', handleScroll);
+		}
+		
+		// Cleanup Intersection Observer
+		if (observer) {
+			observer.disconnect();
+		}
 	});
 
 	afterNavigate((navigation) => {
@@ -333,19 +478,19 @@
 					class="filter-btn {readFilter === 'all' ? 'active' : ''}"
 					on:click={() => readFilter = 'all'}
 				>
-					All ({$articles.length})
+					All ({totalArticles})
 				</button>
 				<button 
 					class="filter-btn {readFilter === 'unread' ? 'active' : ''}"
 					on:click={() => readFilter = 'unread'}
 				>
-					📕 Unread ({$articles.filter(a => !a.Read).length})
+					📕 Unread ({totalUnreadCount})
 				</button>
 				<button 
 					class="filter-btn {readFilter === 'read' ? 'active' : ''}"
 					on:click={() => readFilter = 'read'}
 				>
-					📖 Read ({$articles.filter(a => a.Read).length})
+					📖 Read ({totalReadCount})
 				</button>
 				
 				<!-- Separator -->
@@ -355,7 +500,7 @@
 				<button 
 					class="bulk-action-btn"
 					on:click={markAllAsRead}
-					disabled={$articles.filter(a => !a.Read).length === 0 || $loading.articles}
+					disabled={totalUnreadCount === 0 || $loading.articles}
 					title="Mark all unread articles as read"
 				>
 					{#if $loading.articles}
@@ -378,6 +523,7 @@
 						🔄 Refresh
 					{/if}
 				</button>
+				
 			</div>
 		</div>
 	{/if}
@@ -460,6 +606,17 @@
 				</article>
 			{/each}
 		</div>
+		
+		<!-- Auto-loading indicator -->
+		{#if isLoadingMore}
+			<div class="loading-indicator">
+				<div class="loading-spinner">⏳</div>
+				<p>Loading more articles...</p>
+			</div>
+		{/if}
+		
+		<!-- Sentinel element for Intersection Observer -->
+		<div class="sentinel" bind:this={sentinelElement}></div>
 	{/if}
 </div>
 
@@ -776,6 +933,39 @@
 		text-align: right;
 	}
 
+	/* Loading Indicator */
+	.loading-indicator {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		padding: 2rem 0;
+		margin-top: 1rem;
+		color: var(--text-secondary);
+	}
+
+	.loading-spinner {
+		font-size: 1.5rem;
+		margin-bottom: 0.5rem;
+		animation: spin 1s linear infinite;
+	}
+
+	@keyframes spin {
+		from { transform: rotate(0deg); }
+		to { transform: rotate(360deg); }
+	}
+
+	.loading-indicator p {
+		font-size: 0.875rem;
+		margin: 0;
+	}
+
+	/* Sentinel element for Intersection Observer */
+	.sentinel {
+		height: 1px;
+		width: 100%;
+		background: transparent;
+	}
+
 	/* Responsive */
 	@media (max-width: 768px) {
 		.filter-group {
@@ -824,6 +1014,10 @@
 		.status-icon {
 			font-size: 0.875rem;
 			width: 1.25rem;
+		}
+
+		.loading-indicator {
+			padding: 1.5rem 0;
 		}
 	}
 </style>

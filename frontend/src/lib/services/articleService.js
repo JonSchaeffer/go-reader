@@ -6,19 +6,41 @@ import { articles, setLoading, setError } from '../stores.js';
  */
 export class ArticleService {
 	/**
-	 * Load all articles
+	 * Load all articles with pagination
 	 */
-	static async loadAllArticles() {
+	static async loadAllArticles(offset = 0, limit = 50) {
 		setLoading('articles', true);
 		setError('articles', null);
 
 		try {
-			const response = await articleApi.getAll();
+			const response = await articleApi.getAllPaginated(offset, limit);
 			console.log('Articles API response:', response);
 			
-			const articleList = Array.isArray(response) ? response : [];
-			articles.set(articleList);
-			return articleList;
+			// Handle paginated response
+			if (response && response.articles) {
+				const articleList = Array.isArray(response.articles) ? response.articles : [];
+				
+				if (offset === 0) {
+					// First page - replace all articles
+					articles.set(articleList);
+				} else {
+					// Subsequent pages - append to existing articles
+					articles.update(current => [...current, ...articleList]);
+				}
+				
+				return {
+					articles: articleList,
+					total: response.total,
+					hasMore: response.hasMore,
+					offset: response.offset,
+					limit: response.limit
+				};
+			} else {
+				// Fallback for non-paginated response
+				const articleList = Array.isArray(response) ? response : [];
+				articles.set(articleList);
+				return { articles: articleList, total: articleList.length, hasMore: false };
+			}
 		} catch (error) {
 			console.error('Failed to load articles:', error);
 			setError('articles', 'Failed to load articles. Please check if the backend is running.');

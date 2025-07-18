@@ -91,16 +91,50 @@ func GetRss(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetAllArticles(w http.ResponseWriter, r *http.Request) {
-	// Get article from database
-	article, err := db.GetAllArticles()
+	// Parse pagination parameters
+	offsetParam := r.URL.Query().Get("offset")
+	limitParam := r.URL.Query().Get("limit")
+	
+	offset := 0
+	limit := 50 // Default page size
+	
+	if offsetParam != "" {
+		if o, err := strconv.Atoi(offsetParam); err == nil {
+			offset = o
+		}
+	}
+	
+	if limitParam != "" {
+		if l, err := strconv.Atoi(limitParam); err == nil && l > 0 && l <= 200 { // Max 200 articles per page
+			limit = l
+		}
+	}
+	
+	// Get paginated articles from database
+	articles, err := db.GetAllArticlesPaginated(offset, limit)
 	if err != nil {
-		http.Error(w, "Article not found", http.StatusNotFound)
+		http.Error(w, "Failed to get articles", http.StatusInternalServerError)
 		return
 	}
-
-	// Return article as JSON
+	
+	// Get total count for pagination info
+	totalCount, err := db.GetTotalArticleCount()
+	if err != nil {
+		http.Error(w, "Failed to get article count", http.StatusInternalServerError)
+		return
+	}
+	
+	// Return paginated response
+	response := map[string]interface{}{
+		"articles":    articles,
+		"total":       totalCount,
+		"offset":      offset,
+		"limit":       limit,
+		"hasMore":     offset+limit < totalCount,
+	}
+	
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(article); err != nil {
+	if err := json.NewEncoder(w).Encode(response); err != nil {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 		return
 	}

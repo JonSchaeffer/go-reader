@@ -162,6 +162,17 @@ export const articleApi = {
 	},
 
 	/**
+	 * Get articles with pagination
+	 */
+	async getAllPaginated(offset = 0, limit = 50) {
+		const params = new URLSearchParams({
+			offset: offset.toString(),
+			limit: limit.toString()
+		});
+		return apiRequest(`/articles?${params}`);
+	},
+
+	/**
 	 * Get specific article by ID
 	 */
 	async getById(id) {

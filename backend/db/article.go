@@ -149,14 +149,19 @@ func UpdateArticleReadStatus(id int, read bool) error {
 }
 
 func GetAllArticles() ([]Article, error) {
+	return GetAllArticlesPaginated(0, 100) // Default to first 100 articles
+}
+
+func GetAllArticlesPaginated(offset, limit int) ([]Article, error) {
 	query := `
 	SELECT id, rssID, title, link, GUID, description, publishDate, format, identifier, read, created_at, updated_at
 	FROM article
 	WHERE publishDate != '' AND publishDate IS NOT NULL
-	ORDER BY publishDate::TIMESTAMP DESC;
+	ORDER BY publishDate::TIMESTAMP DESC
+	LIMIT $1 OFFSET $2;
 	`
 
-	rows, err := DB.Query(context.Background(), query)
+	rows, err := DB.Query(context.Background(), query, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -174,6 +179,14 @@ func GetAllArticles() ([]Article, error) {
 		articles = append(articles, article)
 	}
 	return articles, rows.Err()
+}
+
+func GetTotalArticleCount() (int, error) {
+	query := `SELECT COUNT(*) FROM article WHERE publishDate != '' AND publishDate IS NOT NULL`
+	
+	var count int
+	err := DB.QueryRow(context.Background(), query).Scan(&count)
+	return count, err
 }
 
 func SearchArticles(query string, limit int) ([]Article, error) {
