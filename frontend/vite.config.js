@@ -9,8 +9,6 @@ export default defineConfig({
 		port: 3000,
 		strictPort: true,
 		allowedHosts: ['reader-frontend.porgy-monitor.ts.net'], // Allow all hosts for development
-		hmr: {
-			clientPort: 3000
-		}
+		hmr: { clientPort: 3000 }
 	}
 });
