@@ -750,3 +750,54 @@ func DeleteCategory(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(fmt.Sprintf("Category %d deleted successfully", id)))
 }
+
+func GetCategoriesWithFeeds(w http.ResponseWriter, r *http.Request) {
+	categories, err := db.GetAllCategories()
+	if err != nil {
+		http.Error(w, "Failed to get categories", http.StatusInternalServerError)
+		return
+	}
+
+	type CategoryWithFeeds struct {
+		ID    int    `json:"id"`
+		Name  string `json:"name"`
+		Color string `json:"color"`
+		Feeds []db.RSS `json:"feeds"`
+	}
+
+	var result []CategoryWithFeeds
+
+	for _, category := range categories {
+		feeds, err := db.GetRSSByCategory(&category.ID)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Failed to get feeds for category %d: %v", category.ID, err), http.StatusInternalServerError)
+			return
+		}
+
+		result = append(result, CategoryWithFeeds{
+			ID:    category.ID,
+			Name:  category.Name,
+			Color: category.Color,
+			Feeds: feeds,
+		})
+	}
+
+	// Also get uncategorized feeds
+	uncategorizedFeeds, err := db.GetRSSByCategory(nil)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to get uncategorized feeds: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	if len(uncategorizedFeeds) > 0 {
+		result = append(result, CategoryWithFeeds{
+			ID:    0,
+			Name:  "Uncategorized",
+			Color: "#6b7280",
+			Feeds: uncategorizedFeeds,
+		})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
+}

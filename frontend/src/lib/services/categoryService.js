@@ -104,4 +104,25 @@ export class CategoryService {
 		const category = categoriesList.find(cat => cat.ID === categoryId);
 		return category ? category.Color : '#64748b';
 	}
+
+	/**
+	 * Load Categories with their associated Feeds
+	 */
+	static async loadCategoriesWithFeeds() {
+		try {
+			const response = await fetch('http://localhost:8080/api/categories-with-feeds');
+			
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+
+			const categoriesWithFeeds = await response.json();
+			console.log('Categories with feeds API response', categoriesWithFeeds);
+
+			return Array.isArray(categoriesWithFeeds) ? categoriesWithFeeds : [];
+		} catch (error) {
+			console.error('Failed to load CategoriesWithFeeds', error);
+			throw error;
+		}
+	}
 }
