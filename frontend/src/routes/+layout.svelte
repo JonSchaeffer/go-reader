@@ -133,9 +133,8 @@
 		<main class="bg-surface-900 space-y-4 p-4">
 			<slot />
 			<!-- Placeholder content for testing -->
-			<p class="bg-surface-800 text-surface-50 h-[512px] p-4">Paragraph 1</p>
-			<p class="bg-surface-800 text-surface-50 h-[512px] p-4">Paragraph 2</p>
-			<p class="bg-surface-800 text-surface-50 h-[512px] p-4">Paragraph 3</p>
+			<p class="bg-surface-800 text-surface-50 h-[312px] p-4">Paragraph 1</p>
+			<p class="bg-surface-800 text-surface-50 h-[312px] p-4">Paragraph 2</p>
 		</main>
 		<!-- Sidebar (Right) -->
 		<aside class="bg-surface-900 text-surface-100 p-4">(sidebar)</aside>
