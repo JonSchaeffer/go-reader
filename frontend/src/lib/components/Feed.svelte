@@ -55,7 +55,7 @@
 	<div class="space-y-3">
 		{#each feed.articles as article}
 			<div
-				class="card preset-filled-surface-100-900 hover:preset-tonal-primary cursor-pointer border-l-4 {article.unread
+				class="card preset-filled-surface-100-900 hover:preset-tonal-primary cursor-pointer {article.unread
 					? 'border-primary-500'
 					: 'border-transparent'}"
 			>
@@ -71,9 +71,9 @@
 					<div class="min-w-0 flex-1">
 						<!-- Title -->
 						<header>
-							<h3 class="mb-1 line-clamp-2 text-base leading-tight font-medium">
+							<h5 class="mb-1 line-clamp-2 text-base leading-tight font-medium">
 								{article.Title}
-							</h3>
+							</h5>
 						</header>
 
 						<!-- Description -->
