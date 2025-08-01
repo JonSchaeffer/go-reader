@@ -1,6 +1,7 @@
 <script>
 	import '../app.css';
 	import Sidebar from '$lib/components/Sidebar.svelte';
+	import Feed from '$lib/components/Feed.svelte';
 </script>
 
 <svelte:head>
@@ -13,15 +14,9 @@
 	<div class="grid grid-cols-[auto_1fr_auto]">
 		<!-- Sidebar (Left) -->
 		<Sidebar />
-		
+
 		<!-- Main -->
-		<main class="bg-surface-900 space-y-4 p-4">
-			<slot />
-			<!-- Placeholder content for testing -->
-			<p class="bg-surface-800 text-surface-50 h-[312px] p-4">Paragraph 1</p>
-			<p class="bg-surface-800 text-surface-50 h-[312px] p-4">Paragraph 2</p>
-		</main>
-		
+		<Feed />
 		<!-- Sidebar (Right) -->
 		<aside class="bg-surface-900 text-surface-100 p-4">(sidebar)</aside>
 	</div>

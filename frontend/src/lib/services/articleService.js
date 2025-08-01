@@ -9,8 +9,6 @@ export class ArticleService {
 	 * Load all articles with pagination
 	 */
 	static async loadAllArticles(offset = 0, limit = 50) {
-		setLoading('articles', true);
-		setError('articles', null);
 
 		try {
 			const response = await articleApi.getAllPaginated(offset, limit);
@@ -43,7 +41,6 @@ export class ArticleService {
 			}
 		} catch (error) {
 			console.error('Failed to load articles:', error);
-			setError('articles', 'Failed to load articles. Please check if the backend is running.');
 			throw error;
 		} finally {
 		}
@@ -62,7 +59,6 @@ export class ArticleService {
 			return articleList;
 		} catch (error) {
 			console.error('Failed to load articles by feed:', error);
-			setError('articles', 'Failed to load articles for this feed.');
 			throw error;
 		} finally {
 		}
@@ -85,7 +81,6 @@ export class ArticleService {
 			return articleList;
 		} catch (error) {
 			console.error('Failed to search articles:', error);
-			setError('articles', 'Search failed. Please try again.');
 			throw error;
 		} finally {
 		}
@@ -133,7 +128,6 @@ export class ArticleService {
 			return newReadStatus;
 		} catch (error) {
 			console.error('Failed to update read status:', error);
-			setError('articles', 'Failed to update article status');
 			throw error;
 		}
 	}
@@ -154,7 +148,6 @@ export class ArticleService {
 			return true;
 		} catch (error) {
 			console.error('Failed to delete article:', error);
-			setError('articles', `Failed to delete ${articleTitle}`);
 			throw error;
 		}
 	}
@@ -200,7 +193,6 @@ export class ArticleService {
 			return articleList;
 		} catch (error) {
 			console.error('Failed to refresh articles:', error);
-			setError('articles', 'Failed to refresh articles');
 			throw error;
 		} finally {
 		}
