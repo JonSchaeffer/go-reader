@@ -22,9 +22,9 @@
 	});
 </script>
 
-<aside class="text-surface-100 flex w-64 flex-col bg-slate-800">
+<aside class="text-surface-100 flex w-64 flex-col bg-slate-800 border-r border-slate-700">
 	<!-- Custom Header to match sidebar colors -->
-	<header class="flex items-center justify-between bg-slate-800 p-4">
+	<header class="flex items-center justify-between bg-slate-800 p-4 border-b border-slate-700">
 		<h2 class="h2 text-surface-100">YARR</h2>
 		<Settings size={20} class="text-surface-100" />
 	</header>

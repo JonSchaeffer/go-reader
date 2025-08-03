@@ -18,7 +18,7 @@
 		<!-- Main -->
 		<Feed />
 		<!-- Sidebar (Right) -->
-		<aside class="text-surface-100 bg-slate-800 p-4">(sidebar)</aside>
+		<aside class="text-surface-100 bg-slate-800 p-4 border-l border-slate-700">(sidebar)</aside>
 	</div>
 	<!-- Footer -->
 	<footer class="text-surface-100 bg-slate-800 p-4">(footer)</footer>

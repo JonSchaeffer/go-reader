@@ -4,41 +4,6 @@
 
 	let feed = [];
 	let loading = true;
-	const feedData = [
-		{
-			id: 1,
-			title: 'Fair Access to Banking',
-			description: 'Comments',
-			source: 'Hacker News',
-			author: 'Hacker News',
-			timeAgo: '6 mins',
-			timestamp: '10:11 pm',
-			category: 'FEED',
-			unread: true
-		},
-		{
-			id: 2,
-			title: 'Federal judge delays expiration of TPS for Hondura...',
-			description: 'A judge stopped the Trump administration from ending Tem...',
-			source: 'News : NPR',
-			author: 'Sergio Martinez-Beltrán',
-			timeAgo: '2 mins',
-			timestamp: '9:57 pm',
-			category: 'FEED',
-			unread: true
-		},
-		{
-			id: 3,
-			title: 'THPS3+4 - now do Tony Hawk 6',
-			description: "Tony Hawk's Pro Skater 3+4 is a great re-imaging of the ori...",
-			source: 'Jake Baldino',
-			author: 'Jake Baldino',
-			timeAgo: '2 mins',
-			timestamp: '9:57 pm',
-			category: 'FEED',
-			unread: true
-		}
-	];
 	onMount(async () => {
 		try {
 			feed = await ArticleService.loadAllArticles();
@@ -52,14 +17,19 @@
 </script>
 
 <div class="flex-1 space-y-2 bg-slate-900 p-4">
-	<div class="space-y-3">
+	<div class="space-y-1">
 		{#each feed.articles as article}
 			<div
-				class="card preset-filled-surface-100-600 cursor-pointer transition-colors hover:bg-white/10 {article.unread
-					? 'border-primary-900'
-					: 'border-transparent'}"
+				class="card preset-filled-surface-100-600 cursor-pointer transition-colors hover:bg-white/10"
 			>
 				<article class="flex items-start p-3">
+					<!-- Unread notification dot -->
+					{#if !article.Read}
+						<div class="mt-2 mr-3 flex-shrink-0">
+							<div class="h-2 w-2 rounded-full bg-blue-400"></div>
+						</div>
+					{/if}
+
 					<!-- Content -->
 					<div class="min-w-0 flex-1">
 						<!-- Title -->
