@@ -22,15 +22,12 @@
 	});
 </script>
 
-<aside class="bg-surface-900 text-surface-100 flex w-64 flex-col">
-	<AppBar>
-		{#snippet headline()}
-			<h2 class="h2 text-surface-100">RSS Reader</h2>
-		{/snippet}
-		{#snippet trail()}
-			<Settings size={20} />
-		{/snippet}
-	</AppBar>
+<aside class="text-surface-100 flex w-64 flex-col bg-slate-800">
+	<!-- Custom Header to match sidebar colors -->
+	<header class="flex items-center justify-between bg-slate-800 p-4">
+		<h2 class="h2 text-surface-100">YARR</h2>
+		<Settings size={20} class="text-surface-100" />
+	</header>
 
 	<!-- Navigation Menu -->
 	<nav class="flex-1 space-y-1 p-2">
@@ -39,8 +36,8 @@
 			<button
 				class="flex w-full items-center gap-1 rounded-lg p-1 transition-colors {currentSection ===
 				'categories'
-					? 'bg-surface-800'
-					: 'hover:bg-surface-800'}"
+					? 'bg-slate-800'
+					: 'hover:bg-slate-800'}"
 				on:click={() => {
 					currentSection = 'feed';
 					categoriesExpanded = !categoriesExpanded;
@@ -64,7 +61,7 @@
 							<div>
 								<!-- Category Button -->
 								<button
-									class="hover:bg-surface-800 text-surface-100 flex w-full items-center rounded-sm p-1 text-sm"
+									class="text-surface-100 flex w-full items-center rounded-sm p-1 text-sm hover:bg-slate-800"
 									on:click={() => {
 										currentSection = `category-${category.id}`;
 										expandedCategories[category.id] = !expandedCategories[category.id];
@@ -106,8 +103,8 @@
 		<button
 			class="flex w-full items-center gap-1 rounded-lg p-1 transition-colors {currentSection ===
 			'bookmarks'
-				? 'bg-surface-800'
-				: 'hover:bg-surface-800'}"
+				? 'bg-slate-800'
+				: 'hover:bg-slate-800'}"
 			on:click={() => (currentSection = 'bookmarks')}
 		>
 			<span>Bookmarks</span>
@@ -117,12 +114,11 @@
 		<button
 			class="flex w-full items-center gap-1 rounded-lg p-1 transition-colors {currentSection ===
 			'settings'
-				? 'bg-surface-800'
-				: 'hover:bg-surface-800'}"
+				? 'bg-slate-800'
+				: 'hover:bg-slate-800'}"
 			on:click={() => (currentSection = 'settings')}
 		>
 			<span>Settings</span>
 		</button>
 	</nav>
 </aside>
-

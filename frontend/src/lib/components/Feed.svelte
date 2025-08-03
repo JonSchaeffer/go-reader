@@ -51,22 +51,15 @@
 	});
 </script>
 
-<div class="bg-surface-900 flex-1 space-y-2 p-4">
+<div class="flex-1 space-y-2 bg-slate-900 p-4">
 	<div class="space-y-3">
 		{#each feed.articles as article}
 			<div
-				class="card preset-filled-surface-100-900 hover:preset-tonal-primary cursor-pointer {article.unread
-					? 'border-primary-500'
+				class="card preset-filled-surface-100-600 cursor-pointer transition-colors hover:bg-white/10 {article.unread
+					? 'border-primary-900'
 					: 'border-transparent'}"
 			>
-				<article class="flex items-start gap-3 p-4">
-					<!-- Source Icon/Thumbnail -->
-					<!-- <div class="flex-shrink-0"> -->
-					<!-- 	<div class="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-lg" style="background-color: {article.sourceColor}"> -->
-					<!-- 		{article.sourceIcon} -->
-					<!-- 	</div> -->
-					<!-- </div> -->
-
+				<article class="flex items-start p-3">
 					<!-- Content -->
 					<div class="min-w-0 flex-1">
 						<!-- Title -->

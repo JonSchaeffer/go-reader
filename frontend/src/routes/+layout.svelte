@@ -5,8 +5,8 @@
 </script>
 
 <svelte:head>
-	<title>RSS Reader</title>
-	<meta name="description" content="A modern RSS feed reader" />
+	<title>YARR</title>
+	<meta name="description" content="Yet Another RSS Reader" />
 </svelte:head>
 
 <div class="bg-primary-900 grid h-screen grid-rows-[auto_1fr_auto]">
@@ -18,8 +18,8 @@
 		<!-- Main -->
 		<Feed />
 		<!-- Sidebar (Right) -->
-		<aside class="bg-surface-900 text-surface-100 p-4">(sidebar)</aside>
+		<aside class="text-surface-100 bg-slate-800 p-4">(sidebar)</aside>
 	</div>
 	<!-- Footer -->
-	<footer class="bg-surface-900 text-surface-100 p-4">(footer)</footer>
+	<footer class="text-surface-100 bg-slate-800 p-4">(footer)</footer>
 </div>
