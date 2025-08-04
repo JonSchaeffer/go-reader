@@ -119,10 +119,11 @@
 			{/snippet}
 		</AppBar>
 	</div>
-	<div class="space-y-1">
+	<div class="border-t border-white/20 pt-3">
+		<div class="space-y-1">
 		{#each filteredArticles as article}
 			<div
-				class="card preset-filled-surface-100-600 cursor-pointer transition-colors hover:bg-white/10"
+				class="card preset-filled-surface-100-600 cursor-pointer transition-colors hover:bg-white/10 border-b border-white/10 last:border-b-0"
 			>
 				<article class="flex items-start p-3">
 					<!-- Notification dot space (always present) -->
@@ -168,5 +169,6 @@
 				</article>
 			</div>
 		{/each}
+		</div>
 	</div>
 </div>
