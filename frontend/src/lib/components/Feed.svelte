@@ -4,6 +4,35 @@
 
 	let feed = [];
 	let loading = true;
+
+	// Format date to human readable time
+	function formatTime(dateString) {
+		if (!dateString) return '';
+
+		try {
+			const date = new Date(dateString);
+			const now = new Date();
+			const diffInHours = Math.abs(now - date) / (1000 * 60 * 60);
+
+			// If within last 24 hours, show time only
+			if (diffInHours < 24) {
+				return date.toLocaleTimeString('en-US', {
+					hour: 'numeric',
+					minute: '2-digit',
+					hour12: true
+				});
+			}
+
+			// If older, show date
+			return date.toLocaleDateString('en-US', {
+				month: 'short',
+				day: 'numeric'
+			});
+		} catch (error) {
+			return dateString;
+		}
+	}
+
 	onMount(async () => {
 		try {
 			feed = await ArticleService.loadAllArticles();
@@ -23,12 +52,12 @@
 				class="card preset-filled-surface-100-600 cursor-pointer transition-colors hover:bg-white/10"
 			>
 				<article class="flex items-start p-3">
-					<!-- Unread notification dot -->
-					{#if !article.Read}
-						<div class="mt-2 mr-3 flex-shrink-0">
+					<!-- Notification dot space (always present) -->
+					<div class="mt-2 mr-3 flex h-2 w-2 flex-shrink-0 items-center justify-center">
+						{#if !article.Read}
 							<div class="h-2 w-2 rounded-full bg-blue-400"></div>
-						</div>
-					{/if}
+						{/if}
+					</div>
 
 					<!-- Content -->
 					<div class="min-w-0 flex-1">
@@ -52,14 +81,14 @@
 							<span>•</span>
 							<span>author</span>
 							<span>•</span>
-							<span>Timeago</span>
+							<span>Time To Read</span>
 						</footer>
 					</div>
 
 					<!-- Right Side Info -->
 					<div class="flex-shrink-0 text-right">
 						<small class="text-surface-500-400 text-xs">
-							category • {article.PublishDate}
+							category • {formatTime(article.PublishDate)}
 						</small>
 					</div>
 				</article>
