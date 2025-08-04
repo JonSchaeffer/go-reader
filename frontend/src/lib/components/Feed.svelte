@@ -121,54 +121,54 @@
 	</div>
 	<div class="border-t border-white/20 pt-3">
 		<div class="space-y-1">
-		{#each filteredArticles as article}
-			<div
-				class="card preset-filled-surface-100-600 cursor-pointer transition-colors hover:bg-white/10 border-b border-white/10 last:border-b-0"
-			>
-				<article class="flex items-start p-3">
-					<!-- Notification dot space (always present) -->
-					<div class="mt-2 mr-3 flex h-2 w-2 flex-shrink-0 items-center justify-center">
-						{#if !article.Read}
-							<div class="h-2 w-2 rounded-full bg-blue-400"></div>
-						{/if}
-					</div>
-
-					<!-- Content -->
-					<div class="min-w-0 flex-1">
-						<!-- Title -->
-						<header>
-							<h5 class="mb-1 line-clamp-2 text-base leading-tight font-medium">
-								{article.Title}
-							</h5>
-						</header>
-
-						<!-- Description -->
-						{#if article.description}
-							<p class="text-surface-600-300 mb-2 line-clamp-2 text-sm">
-								{article.description}
-							</p>
-						{/if}
-
-						<!-- Source Info -->
-						<footer class="text-surface-500-400 flex items-center gap-2 text-xs">
-							<span class="text-surface-700-200">{article.Author}</span>
-							<span>•</span>
-							<span>{formatTime(article.PublishDate)}</span>
-						</footer>
-					</div>
-
-					<!-- Right Side Info -->
-					<div class="flex-shrink-0 text-right">
-						<small class="text-surface-500-400 text-xs">
-							{#if article.Category && article.Category !== 'Uncategorized'}
-								{article.Category} •
+			{#each filteredArticles as article}
+				<div
+					class="card preset-filled-surface-100-600 cursor-pointer border-b border-white/10 transition-colors last:border-b-0 hover:bg-white/10"
+				>
+					<article class="flex items-start p-3">
+						<!-- Notification dot space (always present) -->
+						<div class="mt-2 mr-3 flex h-2 w-2 flex-shrink-0 items-center justify-center">
+							{#if !article.Read}
+								<div class="h-2 w-2 rounded-full bg-blue-400"></div>
 							{/if}
-							{formatTime(article.PublishDate)}
-						</small>
-					</div>
-				</article>
-			</div>
-		{/each}
+						</div>
+
+						<!-- Content -->
+						<div class="min-w-0 flex-1">
+							<!-- Title -->
+							<header>
+								<h5 class="mb-1 line-clamp-2 text-sm leading-tight font-medium">
+									{article.Title}
+								</h5>
+							</header>
+
+							<!-- Description -->
+							{#if article.description}
+								<p class="text-surface-600-300 mb-2 line-clamp-2 text-sm">
+									{article.description}
+								</p>
+							{/if}
+
+							<!-- Source Info -->
+							<footer class="text-surface-400-500 flex items-center gap-2 text-xs">
+								<span class="text-surface-400-500">{article.Author}</span>
+								<span>•</span>
+								<span>{formatTime(article.PublishDate)}</span>
+							</footer>
+						</div>
+
+						<!-- Right Side Info -->
+						<div class="flex-shrink-0 text-right">
+							<small class="text-surface-400-500 text-xs">
+								{#if article.Category && article.Category !== 'Uncategorized'}
+									{article.Category} •
+								{/if}
+								{formatTime(article.PublishDate)}
+							</small>
+						</div>
+					</article>
+				</div>
+			{/each}
 		</div>
 	</div>
 </div>
