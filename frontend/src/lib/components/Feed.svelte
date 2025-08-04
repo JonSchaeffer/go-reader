@@ -8,7 +8,7 @@
 	let feed = [];
 	let loading = true;
 	let filterMode = 'unread'; // 'unread', 'read'
-	let showRightSidebar = false;
+	export let showRightSidebar = false;
 
 	// Save filter mode to localStorage when it changes
 	$: if (typeof window !== 'undefined') {

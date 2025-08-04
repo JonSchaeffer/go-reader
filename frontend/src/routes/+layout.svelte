@@ -2,6 +2,8 @@
 	import '../app.css';
 	import Sidebar from '$lib/components/Sidebar.svelte';
 	import Feed from '$lib/components/Feed.svelte';
+	
+	let showRightSidebar = false;
 </script>
 
 <svelte:head>
@@ -16,9 +18,11 @@
 		<Sidebar />
 
 		<!-- Main -->
-		<Feed />
+		<Feed bind:showRightSidebar />
 		<!-- Sidebar (Right) -->
-		<aside class="text-surface-100 bg-slate-800 p-4 border-l border-slate-700">(sidebar)</aside>
+		{#if showRightSidebar}
+			<aside class="text-surface-100 bg-slate-800 p-4 border-l border-slate-700">(sidebar)</aside>
+		{/if}
 	</div>
 	<!-- Footer -->
 	<footer class="text-surface-100 bg-slate-800 p-4">(footer)</footer>
