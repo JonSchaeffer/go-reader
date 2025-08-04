@@ -19,6 +19,7 @@ type Article struct {
 	Format      string
 	Identifier  string
 	Read        bool
+	Author      string    // RSS feed title as author
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }
@@ -73,11 +74,12 @@ func CreateArticle(rssID int, title, link, guid, description string, publishDate
 
 func GetArticleByRSSID(id, limit int) ([]Article, error) {
 	query := `
-	SELECT id, rssID, title, link, GUID, description, publishDate, format, identifier, read, created_at, updated_at
-	FROM article
-	WHERE rssid = $1
-	AND publishDate != '' AND publishDate IS NOT NULL
-	ORDER BY publishDate::TIMESTAMP DESC
+	SELECT a.id, a.rssID, a.title, a.link, a.GUID, a.description, a.publishDate, a.format, a.identifier, a.read, r.title as author, a.created_at, a.updated_at
+	FROM article a
+	JOIN rss r ON a.rssID = r.id
+	WHERE a.rssid = $1
+	AND a.publishDate != '' AND a.publishDate IS NOT NULL
+	ORDER BY a.publishDate::TIMESTAMP DESC
 	LIMIT $2
 	`
 
@@ -92,7 +94,7 @@ func GetArticleByRSSID(id, limit int) ([]Article, error) {
 		var article Article
 		err := rows.Scan(&article.ID, &article.RssID, &article.Title, &article.Link,
 			&article.GUID, &article.Description, &article.PublishDate, &article.Format, &article.Identifier,
-			&article.Read, &article.CreatedAt, &article.UpdatedAt)
+			&article.Read, &article.Author, &article.CreatedAt, &article.UpdatedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -154,10 +156,11 @@ func GetAllArticles() ([]Article, error) {
 
 func GetAllArticlesPaginated(offset, limit int) ([]Article, error) {
 	query := `
-	SELECT id, rssID, title, link, GUID, description, publishDate, format, identifier, read, created_at, updated_at
-	FROM article
-	WHERE publishDate != '' AND publishDate IS NOT NULL
-	ORDER BY publishDate::TIMESTAMP DESC
+	SELECT a.id, a.rssID, a.title, a.link, a.GUID, a.description, a.publishDate, a.format, a.identifier, a.read, r.title as author, a.created_at, a.updated_at
+	FROM article a
+	JOIN rss r ON a.rssID = r.id
+	WHERE a.publishDate != '' AND a.publishDate IS NOT NULL
+	ORDER BY a.publishDate::TIMESTAMP DESC
 	LIMIT $1 OFFSET $2;
 	`
 
@@ -172,7 +175,7 @@ func GetAllArticlesPaginated(offset, limit int) ([]Article, error) {
 		var article Article
 		err := rows.Scan(&article.ID, &article.RssID, &article.Title, &article.Link,
 			&article.GUID, &article.Description, &article.PublishDate, &article.Format, &article.Identifier,
-			&article.Read, &article.CreatedAt, &article.UpdatedAt)
+			&article.Read, &article.Author, &article.CreatedAt, &article.UpdatedAt)
 		if err != nil {
 			return nil, err
 		}

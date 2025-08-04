@@ -77,11 +77,9 @@
 
 						<!-- Source Info -->
 						<footer class="text-surface-500-400 flex items-center gap-2 text-xs">
-							<span class="text-surface-700-200">{article.source}</span>
+							<span class="text-surface-700-200">{article.Author}</span>
 							<span>•</span>
-							<span>author</span>
-							<span>•</span>
-							<span>Time To Read</span>
+							<span>{formatTime(article.PublishDate)}</span>
 						</footer>
 					</div>
 
