@@ -86,7 +86,10 @@
 					<!-- Right Side Info -->
 					<div class="flex-shrink-0 text-right">
 						<small class="text-surface-500-400 text-xs">
-							category • {formatTime(article.PublishDate)}
+							{#if article.Category && article.Category !== 'Uncategorized'}
+								{article.Category} • 
+							{/if}
+							{formatTime(article.PublishDate)}
 						</small>
 					</div>
 				</article>
