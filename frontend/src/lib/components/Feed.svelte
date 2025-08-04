@@ -1,9 +1,28 @@
 <script>
 	import { onMount } from 'svelte';
 	import { ArticleService } from '$lib/services/articleService';
+	import { articles } from '$lib/stores';
+	import { AppBar } from '@skeletonlabs/skeleton-svelte';
 
 	let feed = [];
 	let loading = true;
+	let filterMode = 'unread'; // 'unread', 'read'
+	let showRightSidebar = false;
+
+	// Save filter mode to localStorage when it changes
+	$: if (typeof window !== 'undefined') {
+		localStorage.setItem('feedFilterMode', filterMode);
+	}
+
+	// Use articles from the store instead of local feed state
+	$: currentArticles = $articles || [];
+
+	// Filter articles based on read status
+	$: filteredArticles = currentArticles.filter((article) => {
+		if (filterMode === 'unread') return !article.Read;
+		if (filterMode === 'read') return article.Read;
+		return false;
+	});
 
 	// Format date to human readable time
 	function formatTime(dateString) {
@@ -34,20 +53,69 @@
 	}
 
 	onMount(async () => {
+		// Load saved filter mode from localStorage
+		if (typeof window !== 'undefined') {
+			const savedFilter = localStorage.getItem('feedFilterMode');
+			if (savedFilter && (savedFilter === 'unread' || savedFilter === 'read')) {
+				filterMode = savedFilter;
+			}
+		}
+
+		// Load articles
 		try {
-			feed = await ArticleService.loadAllArticles();
+			await ArticleService.loadAllArticles();
 			loading = false;
 		} catch (error) {
 			console.error('Failed to load feed:', error);
-			feed = [];
 			loading = false;
 		}
 	});
 </script>
 
-<div class="flex-1 space-y-2 bg-slate-900 p-4">
+<div class="flex-1 space-y-1 bg-slate-900 p-3">
+	<div class="spacey-1 bg-slate-900">
+		<AppBar background="bg-slate-900">
+			{#snippet headline()}
+				<div class="flex w-full items-center justify-between">
+					<!-- Title and filter buttons -->
+					<div class="flex items-center gap-6">
+						<h3 class="h3 text-surface-100">Feed</h3>
+
+						<!-- Filter buttons -->
+						<div class="flex gap-2">
+							<button
+								class="border-b-2 text-lg font-medium transition-colors {filterMode === 'unread'
+									? 'text-primary-100 border-primary-100'
+									: 'text-surface-300 hover:text-surface-100 border-transparent'}"
+								on:click={() => (filterMode = 'unread')}
+							>
+								Unread
+							</button>
+							<button
+								class="border-b-2 text-lg font-medium transition-colors {filterMode === 'read'
+									? 'text-primary-100 border-primary-100'
+									: 'text-surface-300 hover:text-surface-100 border-transparent'}"
+								on:click={() => (filterMode = 'read')}
+							>
+								Read
+							</button>
+						</div>
+					</div>
+
+					<!-- Sidebar toggle -->
+					<button
+						class="btn btn-sm variant-ghost-surface"
+						on:click={() => (showRightSidebar = !showRightSidebar)}
+						title="Toggle sidebar"
+					>
+						{showRightSidebar ? '→' : '←'}
+					</button>
+				</div>
+			{/snippet}
+		</AppBar>
+	</div>
 	<div class="space-y-1">
-		{#each feed.articles as article}
+		{#each filteredArticles as article}
 			<div
 				class="card preset-filled-surface-100-600 cursor-pointer transition-colors hover:bg-white/10"
 			>
@@ -87,7 +155,7 @@
 					<div class="flex-shrink-0 text-right">
 						<small class="text-surface-500-400 text-xs">
 							{#if article.Category && article.Category !== 'Uncategorized'}
-								{article.Category} • 
+								{article.Category} •
 							{/if}
 							{formatTime(article.PublishDate)}
 						</small>
