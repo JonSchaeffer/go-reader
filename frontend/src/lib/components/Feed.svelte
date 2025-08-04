@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { ArticleService } from '$lib/services/articleService';
 	import { articles } from '$lib/stores';
+	import { PanelRightClose, PanelLeftClose } from '@lucide/svelte';
 	import { AppBar } from '@skeletonlabs/skeleton-svelte';
 
 	let feed = [];
@@ -108,7 +109,11 @@
 						on:click={() => (showRightSidebar = !showRightSidebar)}
 						title="Toggle sidebar"
 					>
-						{showRightSidebar ? '→' : '←'}
+						{#if showRightSidebar}
+							<PanelRightClose size="20" />
+						{:else}
+							<PanelLeftClose size="20" />
+						{/if}
 					</button>
 				</div>
 			{/snippet}
