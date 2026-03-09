@@ -67,6 +67,11 @@ func main() {
 		log.Fatal(err)
 	}
 
+	err = db.CreateHighlightTable()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// Set up HTTP routes with CORS middleware
 	http.HandleFunc("/api/rss", corsMiddleware(routeRss))
 	http.HandleFunc("/api/rss/stats", corsMiddleware(routeRSSStats))             // RSS feed statistics
@@ -84,6 +89,7 @@ func main() {
 	http.HandleFunc("/api/library/single", corsMiddleware(routeLibrarySingle))         // Single library item
 	http.HandleFunc("/api/library/update", corsMiddleware(routeLibraryUpdate))         // Update read/archived status
 	http.HandleFunc("/api/library/search", corsMiddleware(routeLibrarySearch))         // Search library
+	http.HandleFunc("/api/highlights", corsMiddleware(routeHighlights))                // Highlights CRUD
 
 	// Start RSS fetcher in background
 	ctx, cancel := context.WithCancel(context.Background())
@@ -259,6 +265,21 @@ func routeLibrarySearch(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		rss.SearchLibrary(w, r)
+	default:
+		http.Error(w, "Method is not allowed or supported", http.StatusMethodNotAllowed)
+	}
+}
+
+func routeHighlights(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		rss.GetHighlights(w, r)
+	case http.MethodPost:
+		rss.CreateHighlight(w, r)
+	case http.MethodPut:
+		rss.UpdateHighlight(w, r)
+	case http.MethodDelete:
+		rss.DeleteHighlight(w, r)
 	default:
 		http.Error(w, "Method is not allowed or supported", http.StatusMethodNotAllowed)
 	}

@@ -3,12 +3,31 @@
 	import { selectedArticle, visibleArticles, articleModalOpen } from '$lib/stores';
 	import { ArticleService } from '$lib/services/articleService';
 	import { LibraryService } from '$lib/services/libraryService';
+	import { HighlightService } from '$lib/services/highlightService';
+	import HighlightPopover from './HighlightPopover.svelte';
 
 	let saving = false;
+	let highlights = [];
+	let popover = null;
+	let contentEl = null;
 
 	$: currentIndex = $visibleArticles.findIndex((a) => a.ID === $selectedArticle?.ID);
 	$: hasPrev = currentIndex > 0;
 	$: hasNext = currentIndex < $visibleArticles.length - 1;
+
+	// Load highlights when article or modal state changes
+	$: if ($articleModalOpen && $selectedArticle) loadHighlights($selectedArticle);
+
+	async function loadHighlights(article) {
+		highlights = [];
+		if (!article) return;
+		const itemType = article._type === 'library' ? 'library' : 'article';
+		highlights = await HighlightService.getForItem(itemType, article.ID);
+	}
+
+	$: renderedHtml = $selectedArticle?.Description
+		? HighlightService.applyToHtml($selectedArticle.Description, highlights)
+		: '';
 
 	function prev() {
 		if (hasPrev) selectedArticle.set($visibleArticles[currentIndex - 1]);
@@ -19,12 +38,14 @@
 	}
 
 	function close() {
+		popover = null;
 		articleModalOpen.set(false);
 	}
 
 	function handleKeydown(e) {
 		if (!$articleModalOpen) return;
-		if (e.key === 'Escape') close();
+		if (e.key === 'Escape') { if (popover) { popover = null; } else { close(); } return; }
+		if (popover) return; // don't nav while popover open
 		if (e.key === 'ArrowLeft') prev();
 		if (e.key === 'ArrowRight') next();
 	}
@@ -63,9 +84,74 @@
 			saving = false;
 		}
 	}
+
+	function getTextOffset(containerEl, range) {
+		const walker = document.createTreeWalker(containerEl, NodeFilter.SHOW_TEXT, null);
+		let offset = 0, node;
+		while ((node = walker.nextNode())) {
+			if (node === range.startContainer) return offset + range.startOffset;
+			offset += node.textContent.length;
+		}
+		return -1;
+	}
+
+	function handleMouseup(e) {
+		if (e.target.closest('.highlight-popover')) return;
+
+		const markEl = e.target.closest('mark[data-highlight-id]');
+		if (markEl) {
+			const hid = parseInt(markEl.getAttribute('data-highlight-id'));
+			const existing = highlights.find((h) => h.ID === hid);
+			if (existing) {
+				const rect = markEl.getBoundingClientRect();
+				popover = { x: Math.min(rect.left, window.innerWidth - 220), y: rect.bottom + 6, selectedText: existing.SelectedText, textOffset: existing.TextOffset ?? -1, existing };
+				return;
+			}
+		}
+
+		const sel = window.getSelection();
+		if (!sel || sel.isCollapsed) { popover = null; return; }
+		const text = sel.toString().trim();
+		if (text.length < 2) { popover = null; return; }
+
+		const range = sel.getRangeAt(0);
+		const rect = range.getBoundingClientRect();
+		const proseEl = contentEl?.querySelector('.prose');
+		const textOffset = proseEl ? getTextOffset(proseEl, range) : -1;
+		popover = {
+			x: Math.min(rect.left, window.innerWidth - 220),
+			y: rect.bottom + 6,
+			selectedText: text,
+			textOffset,
+			existing: null
+		};
+	}
+
+	async function handleSave({ detail }) {
+		if (!popover || !$selectedArticle) return;
+		const itemType = $selectedArticle._type === 'library' ? 'library' : 'article';
+		if (popover.existing) {
+			await HighlightService.update(popover.existing.ID, detail.color, detail.note);
+		} else {
+			await HighlightService.create(itemType, $selectedArticle.ID, popover.selectedText, detail.color, detail.note, popover.textOffset ?? -1);
+		}
+		popover = null;
+		window.getSelection()?.removeAllRanges();
+		await loadHighlights($selectedArticle);
+	}
+
+	async function handleDelete() {
+		if (!popover?.existing) return;
+		await HighlightService.delete(popover.existing.ID);
+		popover = null;
+		await loadHighlights($selectedArticle);
+	}
 </script>
 
-<svelte:window on:keydown={handleKeydown} />
+<svelte:window
+	on:keydown={handleKeydown}
+	on:mousedown={(e) => { if ($articleModalOpen && !e.target.closest('.highlight-popover')) popover = null; }}
+/>
 
 {#if $articleModalOpen && $selectedArticle}
 	<!-- Backdrop -->
@@ -75,7 +161,10 @@
 		on:click|self={close}
 	>
 		<!-- Modal card -->
-		<div class="relative flex max-h-[90vh] w-full max-w-3xl flex-col rounded-xl bg-slate-800 shadow-2xl">
+		<!-- svelte-ignore a11y-no-static-element-interactions -->
+		<div class="relative flex max-h-[90vh] w-full max-w-3xl flex-col rounded-xl bg-slate-800 shadow-2xl"
+			on:mouseup={handleMouseup}
+		>
 			<!-- Toolbar -->
 			<div class="flex flex-shrink-0 items-center justify-between border-b border-slate-700 px-5 py-3">
 				<!-- Prev / counter / Next -->
@@ -150,7 +239,7 @@
 			</div>
 
 			<!-- Scrollable content -->
-			<div class="overflow-y-auto px-8 py-6">
+			<div class="overflow-y-auto px-8 py-6" bind:this={contentEl} on:scroll={() => popover = null}>
 				<h1 class="mb-3 text-xl font-semibold leading-snug text-surface-100">
 					{$selectedArticle.Title}
 				</h1>
@@ -168,7 +257,11 @@
 					{/if}
 				</div>
 
-				{#if $selectedArticle.Description}
+				{#if renderedHtml}
+					<div class="prose prose-invert prose-sm max-w-none text-surface-200">
+						{@html renderedHtml}
+					</div>
+				{:else if $selectedArticle.Description}
 					<div class="prose prose-invert prose-sm max-w-none text-surface-200">
 						{@html $selectedArticle.Description}
 					</div>
@@ -178,4 +271,15 @@
 			</div>
 		</div>
 	</div>
+{/if}
+
+{#if popover && $articleModalOpen}
+	<HighlightPopover
+		x={popover.x}
+		y={popover.y}
+		existingHighlight={popover.existing}
+		on:save={handleSave}
+		on:delete={handleDelete}
+		on:cancel={() => popover = null}
+	/>
 {/if}

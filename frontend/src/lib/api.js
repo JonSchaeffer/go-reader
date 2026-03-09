@@ -262,6 +262,24 @@ export const libraryApi = {
 };
 
 /**
+ * Highlights API functions
+ */
+export const highlightApi = {
+	async getByItem(itemType, itemId) {
+		return apiRequest(`/highlights?type=${itemType}&id=${itemId}`);
+	},
+	async create(data) {
+		return apiRequest('/highlights', { method: 'POST', body: JSON.stringify(data) });
+	},
+	async update(id, color, note) {
+		return apiRequest(`/highlights?id=${id}`, { method: 'PUT', body: JSON.stringify({ color, note }) });
+	},
+	async delete(id) {
+		return apiRequest(`/highlights?id=${id}`, { method: 'DELETE' });
+	}
+};
+
+/**
  * API client instance for direct use
  */
 export const api = {

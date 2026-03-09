@@ -3,8 +3,27 @@
 	import { selectedArticle, articleModalOpen } from '$lib/stores';
 	import { ArticleService } from '$lib/services/articleService';
 	import { LibraryService } from '$lib/services/libraryService';
+	import { HighlightService } from '$lib/services/highlightService';
+	import HighlightPopover from './HighlightPopover.svelte';
 
 	let saving = false;
+	let highlights = [];
+	let popover = null; // { x, y, selectedText, textOffset, existing? }
+	let contentEl = null;
+
+	// Reload highlights whenever the article changes
+	$: if ($selectedArticle) loadHighlights($selectedArticle);
+
+	async function loadHighlights(article) {
+		highlights = [];
+		if (!article) return;
+		const itemType = article._type === 'library' ? 'library' : 'article';
+		highlights = await HighlightService.getForItem(itemType, article.ID);
+	}
+
+	$: renderedHtml = $selectedArticle?.Description
+		? HighlightService.applyToHtml($selectedArticle.Description, highlights)
+		: '';
 
 	function formatDate(dateString) {
 		if (!dateString) return '';
@@ -42,9 +61,74 @@
 	}
 
 	function close() {
+		popover = null;
 		selectedArticle.set(null);
 	}
+
+	function getTextOffset(containerEl, range) {
+		const walker = document.createTreeWalker(containerEl, NodeFilter.SHOW_TEXT, null);
+		let offset = 0, node;
+		while ((node = walker.nextNode())) {
+			if (node === range.startContainer) return offset + range.startOffset;
+			offset += node.textContent.length;
+		}
+		return -1;
+	}
+
+	function handleMouseup(e) {
+		if (e.target.closest('.highlight-popover')) return;
+
+		const markEl = e.target.closest('mark[data-highlight-id]');
+		if (markEl) {
+			const hid = parseInt(markEl.getAttribute('data-highlight-id'));
+			const existing = highlights.find((h) => h.ID === hid);
+			if (existing) {
+				const rect = markEl.getBoundingClientRect();
+				popover = { x: Math.min(rect.left, window.innerWidth - 220), y: rect.bottom + 6, selectedText: existing.SelectedText, textOffset: existing.TextOffset ?? -1, existing };
+				return;
+			}
+		}
+
+		const sel = window.getSelection();
+		if (!sel || sel.isCollapsed) { popover = null; return; }
+		const text = sel.toString().trim();
+		if (text.length < 2) { popover = null; return; }
+
+		const range = sel.getRangeAt(0);
+		const rect = range.getBoundingClientRect();
+		const proseEl = contentEl?.querySelector('.prose');
+		const textOffset = proseEl ? getTextOffset(proseEl, range) : -1;
+		popover = {
+			x: Math.min(rect.left, window.innerWidth - 220),
+			y: rect.bottom + 6,
+			selectedText: text,
+			textOffset,
+			existing: null
+		};
+	}
+
+	async function handleSave({ detail }) {
+		if (!popover || !$selectedArticle) return;
+		const itemType = $selectedArticle._type === 'library' ? 'library' : 'article';
+		if (popover.existing) {
+			await HighlightService.update(popover.existing.ID, detail.color, detail.note);
+		} else {
+			await HighlightService.create(itemType, $selectedArticle.ID, popover.selectedText, detail.color, detail.note, popover.textOffset ?? -1);
+		}
+		popover = null;
+		window.getSelection()?.removeAllRanges();
+		await loadHighlights($selectedArticle);
+	}
+
+	async function handleDelete() {
+		if (!popover?.existing) return;
+		await HighlightService.delete(popover.existing.ID);
+		popover = null;
+		await loadHighlights($selectedArticle);
+	}
 </script>
+
+<svelte:window on:mousedown={(e) => { if (!e.target.closest('.highlight-popover')) popover = null; }} />
 
 <aside class="flex w-[420px] flex-shrink-0 flex-col overflow-hidden border-l border-slate-700 bg-slate-800">
 	{#if $selectedArticle}
@@ -105,7 +189,8 @@
 		</div>
 
 		<!-- Content -->
-		<div class="flex-1 overflow-y-auto p-5">
+		<!-- svelte-ignore a11y-no-static-element-interactions -->
+		<div class="flex-1 overflow-y-auto p-5" bind:this={contentEl} on:mouseup={handleMouseup} on:scroll={() => popover = null}>
 			<!-- Title -->
 			<h2 class="text-surface-100 mb-3 text-lg font-semibold leading-snug">
 				{$selectedArticle.Title}
@@ -127,7 +212,11 @@
 			</div>
 
 			<!-- Body -->
-			{#if $selectedArticle.Description}
+			{#if renderedHtml}
+				<div class="prose prose-invert prose-sm max-w-none text-surface-200">
+					{@html renderedHtml}
+				</div>
+			{:else if $selectedArticle.Description}
 				<div class="prose prose-invert prose-sm max-w-none text-surface-200">
 					{@html $selectedArticle.Description}
 				</div>
@@ -137,3 +226,14 @@
 		</div>
 	{/if}
 </aside>
+
+{#if popover}
+	<HighlightPopover
+		x={popover.x}
+		y={popover.y}
+		existingHighlight={popover.existing}
+		on:save={handleSave}
+		on:delete={handleDelete}
+		on:cancel={() => popover = null}
+	/>
+{/if}
