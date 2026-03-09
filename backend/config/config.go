@@ -13,7 +13,7 @@ type Config struct {
 func Load() *Config {
 	return &Config{
 		DatabaseURL:    getEnv("DATABASE_URL", "postgres://postgres:postgres@postgres:5432"),
-		FiveFiltersURL: getEnv("FIVEFILTERS_URL", "http://fivefilters-service:8081"),
+		FiveFiltersURL: getEnv("FIVEFILTERS_URL", "http://fullfeedrss:80"),
 		Port:           getEnv("PORT", "8080"),
 	}
 }

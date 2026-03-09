@@ -62,6 +62,11 @@ func main() {
 		log.Fatal(err)
 	}
 
+	err = db.CreateSavedItemTable()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// Set up HTTP routes with CORS middleware
 	http.HandleFunc("/api/rss", corsMiddleware(routeRss))
 	http.HandleFunc("/api/rss/stats", corsMiddleware(routeRSSStats))             // RSS feed statistics
@@ -72,7 +77,13 @@ func main() {
 	http.HandleFunc("/api/articles/by-rss", corsMiddleware(routeArticlesByRSS))  // Articles by RSS ID
 	http.HandleFunc("/api/articles/update", corsMiddleware(routeUpdateArticle))  // Update article read status
 	http.HandleFunc("/api/articles/search", corsMiddleware(routeSearchArticles)) // Search articles
-	http.HandleFunc("/api/articles/delete", corsMiddleware(routeDeleteArticle))  // Delete article by ?id=
+	http.HandleFunc("/api/articles/delete", corsMiddleware(routeDeleteArticle))        // Delete article by ?id=
+	http.HandleFunc("/api/articles/mark-all-read", corsMiddleware(routeMarkAllRead))   // Mark all read by ?rssid=
+	http.HandleFunc("/api/rss/refresh", corsMiddleware(routeRefreshFeed))              // Refresh feed by ?id= (or all)
+	http.HandleFunc("/api/library", corsMiddleware(routeLibrary))                      // Save/list/delete library items
+	http.HandleFunc("/api/library/single", corsMiddleware(routeLibrarySingle))         // Single library item
+	http.HandleFunc("/api/library/update", corsMiddleware(routeLibraryUpdate))         // Update read/archived status
+	http.HandleFunc("/api/library/search", corsMiddleware(routeLibrarySearch))         // Search library
 
 	// Start RSS fetcher in background
 	ctx, cancel := context.WithCancel(context.Background())
@@ -190,6 +201,64 @@ func routeCategories(w http.ResponseWriter, r *http.Request) {
 		rss.UpdateCategory(w, r)
 	case http.MethodDelete:
 		rss.DeleteCategory(w, r)
+	default:
+		http.Error(w, "Method is not allowed or supported", http.StatusMethodNotAllowed)
+	}
+}
+
+func routeMarkAllRead(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPut:
+		rss.MarkAllArticlesRead(w, r)
+	default:
+		http.Error(w, "Method is not allowed or supported", http.StatusMethodNotAllowed)
+	}
+}
+
+func routeRefreshFeed(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		rss.RefreshFeed(w, r)
+	default:
+		http.Error(w, "Method is not allowed or supported", http.StatusMethodNotAllowed)
+	}
+}
+
+func routeLibrary(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		rss.GetLibraryItems(w, r)
+	case http.MethodPost:
+		rss.SaveToLibrary(w, r)
+	case http.MethodDelete:
+		rss.DeleteLibraryItem(w, r)
+	default:
+		http.Error(w, "Method is not allowed or supported", http.StatusMethodNotAllowed)
+	}
+}
+
+func routeLibrarySingle(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		rss.GetSingleLibraryItem(w, r)
+	default:
+		http.Error(w, "Method is not allowed or supported", http.StatusMethodNotAllowed)
+	}
+}
+
+func routeLibraryUpdate(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPut:
+		rss.UpdateLibraryItem(w, r)
+	default:
+		http.Error(w, "Method is not allowed or supported", http.StatusMethodNotAllowed)
+	}
+}
+
+func routeLibrarySearch(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		rss.SearchLibrary(w, r)
 	default:
 		http.Error(w, "Method is not allowed or supported", http.StatusMethodNotAllowed)
 	}

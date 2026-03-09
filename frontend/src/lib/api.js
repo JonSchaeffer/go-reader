@@ -3,7 +3,7 @@
  */
 
 // Use environment variable or fallback to localhost
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000/api';
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8080/api';
 
 /**
  * Generic API request function with error handling
@@ -106,6 +106,14 @@ export const rssApi = {
 	 */
 	async getStats(id) {
 		return apiRequest(`/rss/stats?id=${id}`);
+	},
+
+	/**
+	 * Trigger a refresh — specific feed by ID, or all feeds if no ID given
+	 */
+	async refresh(id) {
+		const params = id ? `?id=${id}` : '';
+		return apiRequest(`/rss/refresh${params}`, { method: 'POST' });
 	}
 };
 
@@ -147,6 +155,13 @@ export const categoryApi = {
 		return apiRequest(`/categories?id=${id}`, {
 			method: 'DELETE'
 		});
+	},
+
+	/**
+	 * Get all categories with their feeds
+	 */
+	async getWithFeeds() {
+		return apiRequest('/categories-with-feeds');
 	}
 };
 
@@ -209,6 +224,40 @@ export const articleApi = {
 		return apiRequest(`/articles/delete?id=${id}`, {
 			method: 'DELETE'
 		});
+	},
+
+	/**
+	 * Mark all articles as read for a feed
+	 */
+	async markAllRead(rssId) {
+		return apiRequest(`/articles/mark-all-read?rssid=${rssId}`, { method: 'PUT' });
+	}
+};
+
+/**
+ * Library API functions
+ */
+export const libraryApi = {
+	async save(data) {
+		return apiRequest('/library', { method: 'POST', body: JSON.stringify(data) });
+	},
+	async getAll(offset = 0, limit = 50, archived = false) {
+		return apiRequest(`/library?offset=${offset}&limit=${limit}&archived=${archived}`);
+	},
+	async getById(id) {
+		return apiRequest(`/library/single?id=${id}`);
+	},
+	async update(id, read, archived) {
+		return apiRequest(`/library/update?id=${id}`, {
+			method: 'PUT',
+			body: JSON.stringify({ read, archived })
+		});
+	},
+	async delete(id) {
+		return apiRequest(`/library?id=${id}`, { method: 'DELETE' });
+	},
+	async search(query, limit = 20) {
+		return apiRequest(`/library/search?q=${encodeURIComponent(query)}&limit=${limit}`);
 	}
 };
 

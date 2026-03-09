@@ -18,6 +18,7 @@ type RSS struct {
 	FeedSize    int       `json:"FeedSize"`
 	Sync        int       `json:"Sync"`
 	CategoryID  *int      `json:"CategoryID"`
+	UnreadCount int       `json:"UnreadCount"`
 	CreatedAt   time.Time `json:"CreatedAt"`
 	UpdatedAt   time.Time `json:"UpdatedAt"`
 }
@@ -103,9 +104,11 @@ func CreateRSS(url, fiveURL, title, description string, feedSize, sync int) (*RS
 
 func GetAllRSS() ([]RSS, error) {
 	query := `
-	SELECT id, url, fiveurl, title, description, feedSize, sync, categoryID, created_at, updated_at 
-	FROM rss 
-	ORDER BY categoryID NULLS FIRST, id`
+	SELECT r.id, r.url, r.fiveurl, r.title, r.description, r.feedSize, r.sync, r.categoryID,
+		COALESCE((SELECT COUNT(*) FROM article a WHERE a.rssid = r.id AND a.read = false), 0) AS unread_count,
+		r.created_at, r.updated_at
+	FROM rss r
+	ORDER BY r.categoryID NULLS FIRST, r.id`
 
 	rows, err := DB.Query(context.Background(), query)
 	if err != nil {
@@ -117,7 +120,7 @@ func GetAllRSS() ([]RSS, error) {
 	for rows.Next() {
 		var rss RSS
 		err := rows.Scan(&rss.ID, &rss.URL, &rss.FiveURL, &rss.Title, &rss.Description,
-			&rss.FeedSize, &rss.Sync, &rss.CategoryID, &rss.CreatedAt, &rss.UpdatedAt)
+			&rss.FeedSize, &rss.Sync, &rss.CategoryID, &rss.UnreadCount, &rss.CreatedAt, &rss.UpdatedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -383,20 +386,22 @@ func GetRSSByCategory(categoryID *int) ([]RSS, error) {
 	var args []interface{}
 
 	if categoryID == nil {
-		// Get uncategorized feeds
 		query = `
-		SELECT id, url, fiveurl, title, description, feedSize, sync, categoryID, created_at, updated_at 
-		FROM rss 
-		WHERE categoryID IS NULL
-		ORDER BY id`
+		SELECT r.id, r.url, r.fiveurl, r.title, r.description, r.feedSize, r.sync, r.categoryID,
+			COALESCE((SELECT COUNT(*) FROM article a WHERE a.rssid = r.id AND a.read = false), 0) AS unread_count,
+			r.created_at, r.updated_at
+		FROM rss r
+		WHERE r.categoryID IS NULL
+		ORDER BY r.id`
 		args = []interface{}{}
 	} else {
-		// Get feeds in specific category
 		query = `
-		SELECT id, url, fiveurl, title, description, feedSize, sync, categoryID, created_at, updated_at 
-		FROM rss 
-		WHERE categoryID = $1
-		ORDER BY id`
+		SELECT r.id, r.url, r.fiveurl, r.title, r.description, r.feedSize, r.sync, r.categoryID,
+			COALESCE((SELECT COUNT(*) FROM article a WHERE a.rssid = r.id AND a.read = false), 0) AS unread_count,
+			r.created_at, r.updated_at
+		FROM rss r
+		WHERE r.categoryID = $1
+		ORDER BY r.id`
 		args = []interface{}{*categoryID}
 	}
 
@@ -410,7 +415,7 @@ func GetRSSByCategory(categoryID *int) ([]RSS, error) {
 	for rows.Next() {
 		var rss RSS
 		err := rows.Scan(&rss.ID, &rss.URL, &rss.FiveURL, &rss.Title, &rss.Description,
-			&rss.FeedSize, &rss.Sync, &rss.CategoryID, &rss.CreatedAt, &rss.UpdatedAt)
+			&rss.FeedSize, &rss.Sync, &rss.CategoryID, &rss.UnreadCount, &rss.CreatedAt, &rss.UpdatedAt)
 		if err != nil {
 			return nil, err
 		}

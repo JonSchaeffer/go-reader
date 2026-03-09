@@ -1,124 +1,146 @@
 <script>
-	import { AppBar } from '@skeletonlabs/skeleton-svelte';
-	import { Settings } from '@lucide/svelte';
+	import { Settings, Rss, Tag, Bookmark } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import { CategoryService } from '$lib/services/categoryService';
+	import { selectedFeedId, selectedArticle, currentView } from '$lib/stores';
 
-	let currentSection = 'articles'; // Track active section
-	let categoriesExpanded = false; // Track if categories are expanded
 	let categoriesWithFeeds = [];
-	let expandedCategories = {}; // Track which categories are expanded
+	let expandedCategories = {};
 	let loading = true;
 
 	onMount(async () => {
 		try {
 			categoriesWithFeeds = await CategoryService.loadCategoriesWithFeeds();
-			loading = false;
 		} catch (error) {
 			console.error('Failed to load categories:', error);
 			categoriesWithFeeds = [];
+		} finally {
 			loading = false;
 		}
 	});
+
+	function selectFeed(feedId) {
+		selectedFeedId.set(feedId);
+		selectedArticle.set(null);
+		currentView.set('feed');
+	}
+
+	function selectAll() {
+		selectedFeedId.set(null);
+		selectedArticle.set(null);
+		currentView.set('feed');
+	}
 </script>
 
-<aside class="text-surface-100 flex w-64 flex-col bg-slate-800 border-r border-slate-700">
-	<!-- Custom Header to match sidebar colors -->
+<aside class="text-surface-100 flex w-56 flex-col bg-slate-800 border-r border-slate-700">
+	<!-- Header -->
 	<header class="flex items-center justify-between bg-slate-800 p-4 border-b border-slate-700">
-		<h2 class="h2 text-surface-100">YARR</h2>
-		<Settings size={20} class="text-surface-100" />
+		<h2 class="text-surface-100 font-semibold text-lg">YARR</h2>
+		<button
+			on:click={() => currentView.set('categories-management')}
+			class="text-surface-400 hover:text-surface-100 transition-colors"
+			title="Manage categories"
+		>
+			<Settings size={16} />
+		</button>
 	</header>
 
-	<!-- Navigation Menu -->
-	<nav class="flex-1 space-y-1 p-2">
-		<!-- Categories Section -->
-		<div>
-			<button
-				class="flex w-full items-center gap-1 rounded-lg p-1 transition-colors {currentSection ===
-				'categories'
-					? 'bg-slate-800'
-					: 'hover:bg-slate-800'}"
-				on:click={() => {
-					currentSection = 'feed';
-					categoriesExpanded = !categoriesExpanded;
-				}}
-			>
-				<span class="flex-1 text-left">Feed</span>
-				<span class="text-sm transition-transform {categoriesExpanded ? 'rotate-90' : ''}"
-					>&gt;</span
-				>
-			</button>
+	<!-- Navigation -->
+	<nav class="flex-1 overflow-y-auto p-2 space-y-1">
+		<!-- All Articles -->
+		<button
+			class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors
+				{$currentView === 'feed' && $selectedFeedId === null
+				? 'bg-slate-700 text-surface-100'
+				: 'text-surface-300 hover:bg-slate-700 hover:text-surface-100'}"
+			on:click={selectAll}
+		>
+			<Rss size={14} />
+			<span>All Articles</span>
+		</button>
 
-			<!-- Collapsible Categories List -->
-			{#if categoriesExpanded}
-				<div class="mt-1 ml-3 space-y-0">
-					{#if loading}
-						<div class="text-surface-100 p-1 text-sm">Loading categories...</div>
-					{:else if categoriesWithFeeds.length === 0}
-						<div class="text-surface-100 p-1 text-sm">No categories found</div>
-					{:else}
-						{#each categoriesWithFeeds as category}
-							<div>
-								<!-- Category Button -->
-								<button
-									class="text-surface-100 flex w-full items-center rounded-sm p-1 text-sm hover:bg-slate-800"
-									on:click={() => {
-										currentSection = `category-${category.id}`;
-										expandedCategories[category.id] = !expandedCategories[category.id];
-									}}
-								>
-									<span class="flex-1 text-left">{category.name}</span>
-									<span
-										class="text-xs transition-transform {expandedCategories[category.id]
-											? 'rotate-90'
-											: ''}">&gt;</span
+		<!-- Feeds by category -->
+		{#if loading}
+			<div class="text-surface-400 px-2 py-1 text-xs">Loading...</div>
+		{:else}
+			{#each categoriesWithFeeds as category}
+				<div>
+					<!-- Category header -->
+					<button
+						class="flex w-full items-center gap-1 rounded-md px-2 py-1 text-xs font-medium uppercase tracking-wide text-surface-400 hover:text-surface-200 transition-colors"
+						on:click={() =>
+							(expandedCategories[category.id] =
+								expandedCategories[category.id] !== false ? false : true)}
+					>
+						<span
+							class="inline-block h-2 w-2 rounded-full flex-shrink-0"
+							style="background-color: {category.color}"
+						></span>
+						<span class="flex-1 text-left">{category.name}</span>
+						<span class="text-xs transition-transform {expandedCategories[category.id] ? 'rotate-90' : ''}">&rsaquo;</span>
+					</button>
+
+					<!-- Feeds under category -->
+					{#if expandedCategories[category.id] !== false}
+						<div class="ml-3 mt-0.5 space-y-0.5">
+							{#if category.feeds && category.feeds.length > 0}
+								{#each category.feeds as feed}
+									<button
+										class="flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-sm transition-colors
+											{$selectedFeedId === feed.ID
+											? 'bg-slate-700 text-surface-100'
+											: 'text-surface-300 hover:bg-slate-700 hover:text-surface-100'}"
+										on:click={() => selectFeed(feed.ID)}
 									>
-								</button>
-
-								<!-- Feeds under this category -->
-								{#if expandedCategories[category.id]}
-									<div class="ml-3 space-y-0">
-										{#if category.feeds && category.feeds.length > 0}
-											{#each category.feeds as feed}
-												<button
-													class="hover:bg-surface-500 text-surface-100 flex w-full items-center rounded-sm p-1 text-xs transition-colors"
-													on:click={() => (currentSection = `feed-${feed.ID}`)}
-												>
-													<span>{feed.Title}</span>
-												</button>
-											{/each}
-										{:else}
-											<div class="text-surface-400 p-1 text-xs">No feeds in this category</div>
+										<span class="flex-1 truncate text-left">{feed.Title || feed.URL}</span>
+										{#if feed.UnreadCount > 0}
+											<span class="rounded-full bg-blue-500/20 px-1.5 py-0.5 text-[10px] font-medium text-blue-400">
+												{feed.UnreadCount}
+											</span>
 										{/if}
-									</div>
-								{/if}
-							</div>
-						{/each}
+									</button>
+								{/each}
+							{:else}
+								<span class="text-surface-500 px-2 text-xs">No feeds</span>
+							{/if}
+						</div>
 					{/if}
 				</div>
-			{/if}
-		</div>
-
-		<!-- Bookmarks Section -->
-		<button
-			class="flex w-full items-center gap-1 rounded-lg p-1 transition-colors {currentSection ===
-			'bookmarks'
-				? 'bg-slate-800'
-				: 'hover:bg-slate-800'}"
-			on:click={() => (currentSection = 'bookmarks')}
-		>
-			<span>Bookmarks</span>
-		</button>
-
-		<!-- Settings Section -->
-		<button
-			class="flex w-full items-center gap-1 rounded-lg p-1 transition-colors {currentSection ===
-			'settings'
-				? 'bg-slate-800'
-				: 'hover:bg-slate-800'}"
-			on:click={() => (currentSection = 'settings')}
-		>
-			<span>Settings</span>
-		</button>
+			{/each}
+		{/if}
 	</nav>
+
+	<!-- Bottom nav -->
+	<div class="border-t border-slate-700 p-2 space-y-1">
+		<button
+			class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors
+				{$currentView === 'library'
+				? 'bg-slate-700 text-surface-100'
+				: 'text-surface-300 hover:bg-slate-700 hover:text-surface-100'}"
+			on:click={() => { currentView.set('library'); selectedArticle.set(null); }}
+		>
+			<Bookmark size={14} />
+			<span>Library</span>
+		</button>
+		<button
+			class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors
+				{$currentView === 'feeds-management'
+				? 'bg-slate-700 text-surface-100'
+				: 'text-surface-300 hover:bg-slate-700 hover:text-surface-100'}"
+			on:click={() => currentView.set('feeds-management')}
+		>
+			<Rss size={14} />
+			<span>Manage Feeds</span>
+		</button>
+		<button
+			class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors
+				{$currentView === 'categories-management'
+				? 'bg-slate-700 text-surface-100'
+				: 'text-surface-300 hover:bg-slate-700 hover:text-surface-100'}"
+			on:click={() => currentView.set('categories-management')}
+		>
+			<Tag size={14} />
+			<span>Categories</span>
+		</button>
+	</div>
 </aside>

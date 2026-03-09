@@ -73,7 +73,7 @@ export class FeedService {
 			
 			// Remove from local state
 			feeds.update(currentFeeds => 
-				currentFeeds.filter(feed => feed.id !== feedId)
+				currentFeeds.filter(feed => feed.ID !== feedId)
 			);
 			
 			return true;

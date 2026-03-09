@@ -1,174 +1,244 @@
 <script>
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
+	import { Maximize2, PanelRight, CheckCheck, RefreshCw } from '@lucide/svelte';
 	import { ArticleService } from '$lib/services/articleService';
-	import { articles } from '$lib/stores';
-	import { PanelRightClose, PanelLeftClose } from '@lucide/svelte';
-	import { AppBar } from '@skeletonlabs/skeleton-svelte';
+	import { articleApi } from '$lib/api.js';
+	import { articles, selectedFeedId, selectedArticle, visibleArticles, articleModalOpen, openMode } from '$lib/stores';
 
-	let feed = [];
 	let loading = true;
-	let filterMode = 'unread'; // 'unread', 'read'
-	export let showRightSidebar = false;
+	let loadingMore = false;
+	let markingRead = false;
+	let filterMode = 'all';
+	let firstLoad = true;
+	let offset = 0;
+	let hasMore = false;
+	const PAGE_SIZE = 50;
 
-	// Save filter mode to localStorage when it changes
-	$: if (typeof window !== 'undefined') {
-		localStorage.setItem('feedFilterMode', filterMode);
-	}
-
-	// Use articles from the store instead of local feed state
 	$: currentArticles = $articles || [];
 
-	// Filter articles based on read status
 	$: filteredArticles = currentArticles.filter((article) => {
+		if ($selectedArticle?.ID === article.ID) return true;
+		if (filterMode === 'all') return true;
 		if (filterMode === 'unread') return !article.Read;
 		if (filterMode === 'read') return article.Read;
 		return false;
 	});
 
-	// Format date to human readable time
+	$: visibleArticles.set(filteredArticles);
+
 	function formatTime(dateString) {
 		if (!dateString) return '';
-
 		try {
 			const date = new Date(dateString);
 			const now = new Date();
 			const diffInHours = Math.abs(now - date) / (1000 * 60 * 60);
-
-			// If within last 24 hours, show time only
 			if (diffInHours < 24) {
-				return date.toLocaleTimeString('en-US', {
-					hour: 'numeric',
-					minute: '2-digit',
-					hour12: true
-				});
+				return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 			}
-
-			// If older, show date
-			return date.toLocaleDateString('en-US', {
-				month: 'short',
-				day: 'numeric'
-			});
-		} catch (error) {
+			return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+		} catch {
 			return dateString;
 		}
 	}
 
-	onMount(async () => {
-		// Load saved filter mode from localStorage
-		if (typeof window !== 'undefined') {
-			const savedFilter = localStorage.getItem('feedFilterMode');
-			if (savedFilter && (savedFilter === 'unread' || savedFilter === 'read')) {
-				filterMode = savedFilter;
-			}
-		}
+	function openArticle(article) {
+		selectedArticle.set(article);
+		if (!article.Read) ArticleService.toggleReadStatus(article.ID, article.Read);
+		if ($openMode === 'modal') articleModalOpen.set(true);
+	}
 
-		// Load articles
+	function openInModal(article) {
+		selectedArticle.set(article);
+		if (!article.Read) ArticleService.toggleReadStatus(article.ID, article.Read);
+		articleModalOpen.set(true);
+	}
+
+	function toggleOpenMode() {
+		openMode.update((m) => (m === 'sidebar' ? 'modal' : 'sidebar'));
+	}
+
+	async function loadMore() {
+		loadingMore = true;
+		const nextOffset = offset + PAGE_SIZE;
+		const result = await ArticleService.loadAllArticles(nextOffset, PAGE_SIZE);
+		offset = nextOffset;
+		hasMore = result?.hasMore ?? false;
+		loadingMore = false;
+	}
+
+	async function markAllRead() {
+		if (!$selectedFeedId) return;
+		markingRead = true;
 		try {
-			await ArticleService.loadAllArticles();
-			loading = false;
-		} catch (error) {
-			console.error('Failed to load feed:', error);
-			loading = false;
+			await articleApi.markAllRead($selectedFeedId);
+			// Update local state — mark all currently loaded articles for this feed as read
+			articles.update((all) =>
+				all.map((a) => (a.RssID === $selectedFeedId ? { ...a, Read: true } : a))
+			);
+		} finally {
+			markingRead = false;
 		}
+	}
+
+	// React to feed selection changes
+	const unsubscribe = selectedFeedId.subscribe(async (feedId) => {
+		if (firstLoad) return;
+		filterMode = 'all';
+		offset = 0;
+		hasMore = false;
+		loading = true;
+		if (feedId !== null) {
+			await ArticleService.loadArticlesByFeed(feedId);
+		} else {
+			const result = await ArticleService.loadAllArticles(0, PAGE_SIZE);
+			hasMore = result?.hasMore ?? false;
+		}
+		loading = false;
 	});
+
+	onMount(async () => {
+		const savedMode = localStorage.getItem('openMode');
+		if (savedMode === 'sidebar' || savedMode === 'modal') openMode.set(savedMode);
+
+		const result = await ArticleService.loadAllArticles(0, PAGE_SIZE);
+		hasMore = result?.hasMore ?? false;
+		loading = false;
+		firstLoad = false;
+	});
+
+	onDestroy(unsubscribe);
+
+	$: if (typeof window !== 'undefined') localStorage.setItem('openMode', $openMode);
 </script>
 
-<div class="flex-1 space-y-1 bg-slate-900 p-3">
-	<div class="spacey-1 bg-slate-900">
-		<AppBar background="bg-slate-900">
-			{#snippet headline()}
-				<div class="flex w-full items-center justify-between">
-					<!-- Title and filter buttons -->
-					<div class="flex items-center gap-6">
-						<h3 class="h3 text-surface-100">Feed</h3>
-
-						<!-- Filter buttons -->
-						<div class="flex gap-2">
-							<button
-								class="border-b-2 text-lg font-medium transition-colors {filterMode === 'unread'
-									? 'text-primary-100 border-primary-100'
-									: 'text-surface-300 hover:text-surface-100 border-transparent'}"
-								on:click={() => (filterMode = 'unread')}
-							>
-								Unread
-							</button>
-							<button
-								class="border-b-2 text-lg font-medium transition-colors {filterMode === 'read'
-									? 'text-primary-100 border-primary-100'
-									: 'text-surface-300 hover:text-surface-100 border-transparent'}"
-								on:click={() => (filterMode = 'read')}
-							>
-								Read
-							</button>
-						</div>
-					</div>
-
-					<!-- Sidebar toggle -->
+<div class="flex flex-1 flex-col overflow-hidden bg-slate-900">
+	<!-- Header -->
+	<div class="flex items-baseline justify-between border-b border-white/10 px-4 py-3">
+		<div class="flex items-baseline gap-4">
+			<span class="text-sm font-semibold text-surface-100">
+				{$selectedFeedId ? 'Feed' : 'All Articles'}
+			</span>
+			<div class="flex gap-3">
+				{#each [['all', 'All'], ['unread', 'Unread'], ['read', 'Read']] as [mode, label]}
 					<button
-						class="btn btn-sm variant-ghost-surface"
-						on:click={() => (showRightSidebar = !showRightSidebar)}
-						title="Toggle sidebar"
+						class="border-b-2 pb-0.5 text-sm font-medium transition-colors {filterMode === mode
+							? 'border-blue-400 text-blue-400'
+							: 'border-transparent text-surface-400 hover:text-surface-100'}"
+						on:click={() => (filterMode = mode)}
 					>
-						{#if showRightSidebar}
-							<PanelRightClose size="20" />
+						{label}
+					</button>
+				{/each}
+			</div>
+		</div>
+
+		<div class="flex items-center gap-2">
+			<span class="text-surface-500 text-xs">{filteredArticles.length} articles</span>
+
+			<!-- Mark all read (only when a specific feed is selected) -->
+			{#if $selectedFeedId}
+				<button
+					on:click={markAllRead}
+					disabled={markingRead}
+					title="Mark all as read"
+					class="rounded p-1 text-surface-500 transition-colors hover:bg-slate-800 hover:text-surface-100 disabled:opacity-40"
+				>
+					<CheckCheck size={14} />
+				</button>
+			{/if}
+
+			<!-- Default open mode toggle -->
+			<button
+				on:click={toggleOpenMode}
+				title="Default: open in {$openMode === 'sidebar' ? 'sidebar' : 'full screen'} — click to switch"
+				class="rounded p-1 text-surface-500 transition-colors hover:bg-slate-800 hover:text-surface-100"
+			>
+				{#if $openMode === 'sidebar'}
+					<PanelRight size={14} />
+				{:else}
+					<Maximize2 size={14} />
+				{/if}
+			</button>
+		</div>
+	</div>
+
+	<!-- Article list -->
+	<div class="flex-1 overflow-y-auto">
+		{#if loading}
+			<div class="text-surface-400 p-4 text-sm">Loading...</div>
+		{:else if filteredArticles.length === 0}
+			<div class="text-surface-400 p-4 text-sm">
+				No {filterMode === 'all' ? '' : filterMode + ' '}articles.
+			</div>
+		{:else}
+			{#each filteredArticles as article (article.ID)}
+				<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+				<div
+					class="group relative border-b border-white/10 last:border-b-0 transition-colors
+						{$selectedArticle?.ID === article.ID ? 'bg-slate-700' : 'hover:bg-slate-800'}"
+				>
+					<button class="w-full p-3 text-left" on:click={() => openArticle(article)}>
+						<div class="flex items-start gap-2 pr-6">
+							<div class="mt-1.5 h-2 w-2 flex-shrink-0">
+								{#if !article.Read}
+									<div class="h-2 w-2 rounded-full bg-blue-400"></div>
+								{/if}
+							</div>
+							<div class="min-w-0 flex-1">
+								<p class="text-surface-100 mb-0.5 line-clamp-2 text-sm font-medium leading-snug {article.Read ? 'opacity-60' : ''}">
+									{article.Title}
+								</p>
+								{#if article.Description}
+									<p class="text-surface-400 mb-1 line-clamp-2 text-xs">
+										{article.Description?.replace(/<[^>]*>/g, '').slice(0, 120)}
+									</p>
+								{/if}
+								<div class="text-surface-500 flex items-center gap-1.5 text-xs">
+									{#if article.Author}
+										<span>{article.Author}</span>
+										<span>·</span>
+									{/if}
+									<span>{formatTime(article.PublishDate)}</span>
+									{#if article.Category && article.Category !== 'Uncategorized'}
+										<span>·</span>
+										<span>{article.Category}</span>
+									{/if}
+								</div>
+							</div>
+						</div>
+					</button>
+
+					{#if $openMode === 'sidebar'}
+						<button
+							on:click={() => openInModal(article)}
+							title="Open in full screen"
+							class="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1.5
+								opacity-0 group-hover:opacity-100 transition-opacity
+								text-surface-500 hover:bg-slate-600 hover:text-surface-100"
+						>
+							<Maximize2 size={13} />
+						</button>
+					{/if}
+				</div>
+			{/each}
+
+			<!-- Load more (only for all-articles view) -->
+			{#if !$selectedFeedId && hasMore}
+				<div class="flex justify-center p-4">
+					<button
+						on:click={loadMore}
+						disabled={loadingMore}
+						class="flex items-center gap-2 rounded-md px-4 py-2 text-sm text-surface-400 hover:bg-slate-800 hover:text-surface-100 disabled:opacity-40 transition-colors"
+					>
+						{#if loadingMore}
+							<RefreshCw size={13} class="animate-spin" />
+							Loading…
 						{:else}
-							<PanelLeftClose size="20" />
+							Load more
 						{/if}
 					</button>
 				</div>
-			{/snippet}
-		</AppBar>
-	</div>
-	<div class="border-t border-white/20 pt-3">
-		<div class="space-y-1">
-			{#each filteredArticles as article}
-				<div
-					class="card preset-filled-surface-100-600 cursor-pointer border-b border-white/10 transition-colors last:border-b-0 hover:bg-white/10"
-				>
-					<article class="flex items-start p-3">
-						<!-- Notification dot space (always present) -->
-						<div class="mt-2 mr-3 flex h-2 w-2 flex-shrink-0 items-center justify-center">
-							{#if !article.Read}
-								<div class="h-2 w-2 rounded-full bg-blue-400"></div>
-							{/if}
-						</div>
-
-						<!-- Content -->
-						<div class="min-w-0 flex-1">
-							<!-- Title -->
-							<header>
-								<h5 class="mb-1 line-clamp-2 text-sm leading-tight font-medium">
-									{article.Title}
-								</h5>
-							</header>
-
-							<!-- Description -->
-							{#if article.description}
-								<p class="text-surface-600-300 mb-2 line-clamp-2 text-sm">
-									{article.description}
-								</p>
-							{/if}
-
-							<!-- Source Info -->
-							<footer class="text-surface-400-500 flex items-center gap-2 text-xs">
-								<span class="text-surface-400-500">{article.Author}</span>
-								<span>•</span>
-								<span>{formatTime(article.PublishDate)}</span>
-							</footer>
-						</div>
-
-						<!-- Right Side Info -->
-						<div class="flex-shrink-0 text-right">
-							<small class="text-surface-400-500 text-xs">
-								{#if article.Category && article.Category !== 'Uncategorized'}
-									{article.Category} •
-								{/if}
-								{formatTime(article.PublishDate)}
-							</small>
-						</div>
-					</article>
-				</div>
-			{/each}
-		</div>
+			{/if}
+		{/if}
 	</div>
 </div>

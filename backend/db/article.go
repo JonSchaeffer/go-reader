@@ -225,6 +225,20 @@ func SearchArticles(query string, limit int) ([]Article, error) {
 	return articles, rows.Err()
 }
 
+func ArticleExistsByGUID(rssID int, guid string) (bool, error) {
+	var exists bool
+	err := DB.QueryRow(context.Background(),
+		"SELECT EXISTS(SELECT 1 FROM article WHERE rssid = $1 AND guid = $2)",
+		rssID, guid).Scan(&exists)
+	return exists, err
+}
+
+func MarkAllArticlesReadByRSSID(rssID int) error {
+	_, err := DB.Exec(context.Background(),
+		"UPDATE article SET read = true WHERE rssid = $1", rssID)
+	return err
+}
+
 func DeleteArticle(id int) error {
 	query := `
 	DELETE FROM article

@@ -255,6 +255,7 @@ func UpdateArticleReadStatus(w http.ResponseWriter, r *http.Request) {
 
 	if readParam == "" {
 		http.Error(w, "Read parameter is required", http.StatusBadRequest)
+		return
 	}
 
 	// Convert ID parameter to integer
@@ -405,9 +406,13 @@ func SaveRSSArticles(FeedURL string, FeedID int) {
 	processor := NewContentProcessor()
 
 	for _, item := range rss.Channel.Items {
-		// TODO: This approach isn't super efficient. It will process the description
-		// for every Rss Article even if it already exists. I think putting in a Check
-		// to compare GUID's first should help with this.
+		// Skip if GUID already exists in DB — avoids re-processing HTML for known articles
+		if item.GUID != "" {
+			exists, err := db.ArticleExistsByGUID(FeedID, item.GUID)
+			if err == nil && exists {
+				continue
+			}
+		}
 
 		// Process description
 		processedDescription := processor.ProcessContent(item.Description)
@@ -605,6 +610,54 @@ func GetRSSStats(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 		return
 	}
+}
+
+func MarkAllArticlesRead(w http.ResponseWriter, r *http.Request) {
+	idParam := r.URL.Query().Get("rssid")
+	if idParam == "" {
+		http.Error(w, "rssid parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		http.Error(w, "Invalid rssid parameter", http.StatusBadRequest)
+		return
+	}
+
+	err = db.MarkAllArticlesReadByRSSID(id)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error marking articles read for feed %d", id), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(fmt.Sprintf("All articles for feed %d marked as read", id)))
+}
+
+func RefreshFeed(w http.ResponseWriter, r *http.Request) {
+	idParam := r.URL.Query().Get("id")
+
+	if idParam != "" {
+		id, err := strconv.Atoi(idParam)
+		if err != nil {
+			http.Error(w, "Invalid ID parameter", http.StatusBadRequest)
+			return
+		}
+
+		feed, err := db.GetRSSByID(id)
+		if err != nil {
+			http.Error(w, "Feed not found", http.StatusNotFound)
+			return
+		}
+
+		go SaveRSSArticles(feed.FiveURL, feed.ID)
+	} else {
+		go FetchNewArticles()
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Refresh triggered"))
 }
 
 func DeleteArticle(w http.ResponseWriter, r *http.Request) {

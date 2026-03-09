@@ -2,8 +2,12 @@
 	import '../app.css';
 	import Sidebar from '$lib/components/Sidebar.svelte';
 	import Feed from '$lib/components/Feed.svelte';
-	
-	let showRightSidebar = false;
+	import ArticleDetail from '$lib/components/ArticleDetail.svelte';
+	import ArticleModal from '$lib/components/ArticleModal.svelte';
+	import FeedsManagement from '$lib/components/FeedsManagement.svelte';
+	import CategoriesManagement from '$lib/components/CategoriesManagement.svelte';
+	import LibraryFeed from '$lib/components/LibraryFeed.svelte';
+	import { selectedArticle, currentView, articleModalOpen, openMode } from '$lib/stores';
 </script>
 
 <svelte:head>
@@ -11,19 +15,22 @@
 	<meta name="description" content="Yet Another RSS Reader" />
 </svelte:head>
 
-<div class="bg-primary-900 grid h-screen grid-rows-[auto_1fr_auto]">
-	<!-- Grid Column -->
-	<div class="grid grid-cols-[auto_1fr_auto]">
-		<!-- Sidebar (Left) -->
-		<Sidebar />
+<div class="flex h-screen overflow-hidden bg-slate-900 transition-[filter] duration-200 {$articleModalOpen ? 'blur-sm brightness-75' : ''}">
+	<Sidebar />
 
-		<!-- Main -->
-		<Feed bind:showRightSidebar />
-		<!-- Sidebar (Right) -->
-		{#if showRightSidebar}
-			<aside class="text-surface-100 bg-slate-800 p-4 border-l border-slate-700">(sidebar)</aside>
-		{/if}
-	</div>
-	<!-- Footer -->
-	<footer class="text-surface-100 bg-slate-800 p-4">(footer)</footer>
+	{#if $currentView === 'feeds-management'}
+		<FeedsManagement />
+	{:else if $currentView === 'categories-management'}
+		<CategoriesManagement />
+	{:else if $currentView === 'library'}
+		<LibraryFeed />
+	{:else}
+		<Feed />
+	{/if}
+
+	{#if $selectedArticle && !$articleModalOpen}
+		<ArticleDetail />
+	{/if}
 </div>
+
+<ArticleModal />

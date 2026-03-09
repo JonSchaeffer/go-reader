@@ -6,6 +6,41 @@ import { writable } from 'svelte/store';
 export const feeds = writable([]);
 
 /**
+ * Currently selected feed ID (null = all feeds)
+ */
+export const selectedFeedId = writable(null);
+
+/**
+ * Library saved items
+ */
+export const savedItems = writable([]);
+
+/**
+ * Currently selected article (null = none)
+ */
+export const selectedArticle = writable(null);
+
+/**
+ * Current main view
+ */
+export const currentView = writable('feed'); // 'feed' | 'feeds-management' | 'categories-management'
+
+/**
+ * The current filtered/visible article list (written by Feed, read by modal for prev/next)
+ */
+export const visibleArticles = writable([]);
+
+/**
+ * Whether the full-screen reading modal is open
+ */
+export const articleModalOpen = writable(false);
+
+/**
+ * Default article open behaviour: 'sidebar' | 'modal'
+ */
+export const openMode = writable('sidebar');
+
+/**
  * Articles store
  */
 export const articles = writable([]);
