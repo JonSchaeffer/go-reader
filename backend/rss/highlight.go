@@ -8,6 +8,20 @@ import (
 	"github.com/JonSchaeffer/go-reader/db"
 )
 
+// GET /api/highlights/all
+func GetAllHighlights(w http.ResponseWriter, r *http.Request) {
+	highlights, err := db.GetAllHighlights()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if highlights == nil {
+		highlights = []db.HighlightWithContext{}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(highlights)
+}
+
 // GET /api/highlights?type=library&id=5
 func GetHighlights(w http.ResponseWriter, r *http.Request) {
 	itemType := r.URL.Query().Get("type")

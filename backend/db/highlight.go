@@ -89,6 +89,51 @@ func UpdateHighlight(id int, color, note string) error {
 	return nil
 }
 
+type HighlightWithContext struct {
+	Highlight
+	ItemTitle string `json:"ItemTitle"`
+	ItemURL   string `json:"ItemURL"`
+}
+
+func GetAllHighlights() ([]HighlightWithContext, error) {
+	query := `
+	SELECT h.id, h.item_type, h.item_id, h.selected_text, h.color, h.note, h.text_offset, h.created_at,
+		COALESCE(
+			CASE WHEN h.item_type = 'library' THEN si.title
+			     WHEN h.item_type = 'article' THEN a.title
+			END, ''
+		) AS item_title,
+		COALESCE(
+			CASE WHEN h.item_type = 'library' THEN si.url
+			     WHEN h.item_type = 'article' THEN a.link
+			END, ''
+		) AS item_url
+	FROM highlight h
+	LEFT JOIN saved_item si ON h.item_type = 'library' AND h.item_id = si.id
+	LEFT JOIN article a ON h.item_type = 'article' AND h.item_id = a.id
+	ORDER BY h.created_at DESC`
+
+	rows, err := DB.Query(context.Background(), query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []HighlightWithContext
+	for rows.Next() {
+		var h HighlightWithContext
+		err := rows.Scan(
+			&h.ID, &h.ItemType, &h.ItemID, &h.SelectedText, &h.Color, &h.Note, &h.TextOffset, &h.CreatedAt,
+			&h.ItemTitle, &h.ItemURL,
+		)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, h)
+	}
+	return results, rows.Err()
+}
+
 func DeleteHighlight(id int) error {
 	result, err := DB.Exec(context.Background(), "DELETE FROM highlight WHERE id = $1", id)
 	if err != nil {

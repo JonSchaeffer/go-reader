@@ -1,5 +1,5 @@
 <script>
-	import { Settings, Rss, Tag, Bookmark } from '@lucide/svelte';
+	import { Settings, Rss, Tag, Bookmark, Highlighter } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import { CategoryService } from '$lib/services/categoryService';
 	import { selectedFeedId, selectedArticle, currentView } from '$lib/stores';
@@ -121,6 +121,16 @@
 		>
 			<Bookmark size={14} />
 			<span>Library</span>
+		</button>
+		<button
+			class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors
+				{$currentView === 'highlights'
+				? 'bg-slate-700 text-surface-100'
+				: 'text-surface-300 hover:bg-slate-700 hover:text-surface-100'}"
+			on:click={() => { currentView.set('highlights'); selectedArticle.set(null); }}
+		>
+			<Highlighter size={14} />
+			<span>Highlights</span>
 		</button>
 		<button
 			class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors

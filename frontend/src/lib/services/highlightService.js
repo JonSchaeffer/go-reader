@@ -1,6 +1,11 @@
 import { highlightApi } from '../api.js';
 
 export class HighlightService {
+	static async getAll() {
+		const result = await highlightApi.getAll();
+		return Array.isArray(result) ? result : [];
+	}
+
 	static async getForItem(itemType, itemId) {
 		const result = await highlightApi.getByItem(itemType, itemId);
 		return Array.isArray(result) ? result : [];

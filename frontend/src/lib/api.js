@@ -265,6 +265,9 @@ export const libraryApi = {
  * Highlights API functions
  */
 export const highlightApi = {
+	async getAll() {
+		return apiRequest('/highlights/all');
+	},
 	async getByItem(itemType, itemId) {
 		return apiRequest(`/highlights?type=${itemType}&id=${itemId}`);
 	},
