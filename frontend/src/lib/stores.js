@@ -1,5 +1,19 @@
 import { writable } from 'svelte/store';
 
+// Reader settings — persisted to localStorage
+const READER_DEFAULTS = { fontSize: 'md', fontFamily: 'sans', lineWidth: 'medium', theme: 'dark' };
+function createReaderSettings() {
+	const stored = typeof localStorage !== 'undefined'
+		? JSON.parse(localStorage.getItem('readerSettings') || 'null')
+		: null;
+	const store = writable({ ...READER_DEFAULTS, ...stored });
+	store.subscribe((v) => {
+		if (typeof localStorage !== 'undefined') localStorage.setItem('readerSettings', JSON.stringify(v));
+	});
+	return store;
+}
+export const readerSettings = createReaderSettings();
+
 /**
  * RSS Feeds store
  */
