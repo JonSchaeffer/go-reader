@@ -292,6 +292,30 @@ export const highlightApi = {
 };
 
 /**
+ * Tags API functions
+ */
+export const tagApi = {
+	async getAll() {
+		return apiRequest('/tags');
+	},
+	async create(name) {
+		return apiRequest('/tags', { method: 'POST', body: JSON.stringify({ name }) });
+	},
+	async delete(id) {
+		return apiRequest(`/tags?id=${id}`, { method: 'DELETE' });
+	},
+	async getForItem(itemType, itemId) {
+		return apiRequest(`/tags/item?type=${itemType}&id=${itemId}`);
+	},
+	async addToItem(itemType, itemId, tagId) {
+		return apiRequest('/tags/item', { method: 'POST', body: JSON.stringify({ itemType, itemId, tagId }) });
+	},
+	async removeFromItem(itemType, itemId, tagId) {
+		return apiRequest(`/tags/item?type=${itemType}&id=${itemId}&tagId=${tagId}`, { method: 'DELETE' });
+	}
+};
+
+/**
  * API client instance for direct use
  */
 export const api = {

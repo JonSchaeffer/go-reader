@@ -8,6 +8,7 @@
 	import { readingTime, saveProgress, restoreProgress } from '$lib/utils/readingTime';
 	import HighlightPopover from './HighlightPopover.svelte';
 	import ReaderSettings from './ReaderSettings.svelte';
+	import TagEditor from './TagEditor.svelte';
 
 	let saving = false;
 	let highlights = [];
@@ -245,6 +246,14 @@
 							<span>·</span>
 							<span class="rounded bg-slate-700 px-1.5 py-0.5">{$selectedArticle.Category}</span>
 						{/if}
+					</div>
+
+					<!-- Tags -->
+					<div class="mb-4">
+						<TagEditor
+							itemType={$selectedArticle._type === 'library' ? 'library' : 'article'}
+							itemId={$selectedArticle.ID}
+						/>
 					</div>
 
 					{#if renderedHtml}

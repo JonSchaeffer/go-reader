@@ -1,8 +1,10 @@
 <script>
 	import { onMount } from 'svelte';
-	import { Plus, RefreshCw, Archive, Maximize2, PanelRight, Bookmark } from '@lucide/svelte';
+	import { Plus, RefreshCw, Archive, Maximize2, PanelRight, Bookmark, Tag, X } from '@lucide/svelte';
 	import { LibraryService } from '$lib/services/libraryService';
-	import { savedItems, selectedArticle, articleModalOpen, openMode } from '$lib/stores';
+	import { TagService } from '$lib/services/tagService';
+	import { savedItems, selectedArticle, articleModalOpen, openMode, allTags } from '$lib/stores';
+	import { tagApi } from '$lib/api';
 
 	let loading = true;
 	let loadingMore = false;
@@ -15,12 +17,21 @@
 	let offset = 0;
 	const PAGE_SIZE = 50;
 
+	let selectedTagId = null;      // tag filter
+	let itemTagMap = {};           // itemId -> Tag[]
+
 	$: filteredItems = ($savedItems ?? []).filter((item) => {
 		if ($selectedArticle?._type === 'library' && $selectedArticle?.ID === item.ID) return true;
-		if (filterMode === 'all') return !item.Archived;
-		if (filterMode === 'unread') return !item.Read && !item.Archived;
-		if (filterMode === 'archived') return item.Archived;
-		return false;
+		const modeOk = filterMode === 'all' ? !item.Archived
+			: filterMode === 'unread' ? !item.Read && !item.Archived
+			: filterMode === 'archived' ? item.Archived
+			: false;
+		if (!modeOk) return false;
+		if (selectedTagId) {
+			const tags = itemTagMap[item.ID] ?? [];
+			return tags.some((t) => t.ID === selectedTagId);
+		}
+		return true;
 	});
 
 	function formatTime(dateString) {
@@ -112,11 +123,23 @@
 		loading = false;
 	}
 
+	async function loadTagsForItems(items) {
+		await TagService.loadAll();
+		const entries = await Promise.all(
+			items.map(async (item) => [item.ID, await TagService.getForItem('library', item.ID)])
+		);
+		itemTagMap = Object.fromEntries(entries);
+	}
+
 	onMount(async () => {
 		const result = await LibraryService.loadItems(0, PAGE_SIZE, false);
 		hasMore = result.hasMore;
 		loading = false;
+		loadTagsForItems($savedItems ?? []);
 	});
+
+	// Reload tag map when savedItems changes
+	$: if ($savedItems?.length) loadTagsForItems($savedItems);
 </script>
 
 <div class="flex flex-1 flex-col overflow-hidden bg-slate-900">
@@ -150,6 +173,24 @@
 			</button>
 		</div>
 	</div>
+
+	<!-- Tag filter bar -->
+	{#if $allTags.length > 0}
+		<div class="flex flex-wrap items-center gap-1.5 border-b border-white/10 px-4 py-2">
+			<button
+				class="rounded-full px-2.5 py-0.5 text-[11px] font-medium transition-colors {selectedTagId === null ? 'bg-slate-600 text-surface-100' : 'text-surface-500 hover:text-surface-300'}"
+				on:click={() => (selectedTagId = null)}
+			>All</button>
+			{#each $allTags as tag (tag.ID)}
+				<button
+					class="flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium transition-colors {selectedTagId === tag.ID ? 'bg-blue-700 text-white' : 'bg-slate-700/60 text-surface-400 hover:text-surface-200'}"
+					on:click={() => (selectedTagId = selectedTagId === tag.ID ? null : tag.ID)}
+				>
+					{tag.Name}
+				</button>
+			{/each}
+		</div>
+	{/if}
 
 	<!-- Save URL form -->
 	{#if showSaveForm}
@@ -226,6 +267,13 @@
 									<span>·</span>
 									<span class="capitalize">{item.SourceType === 'rss_article' ? 'RSS' : 'URL'}</span>
 								</div>
+								{#if (itemTagMap[item.ID] ?? []).length > 0}
+									<div class="mt-1.5 flex flex-wrap gap-1">
+										{#each itemTagMap[item.ID] as tag (tag.ID)}
+											<span class="rounded-full bg-blue-900/50 px-2 py-0.5 text-[10px] text-blue-300">{tag.Name}</span>
+										{/each}
+									</div>
+								{/if}
 							</div>
 						</div>
 					</button>

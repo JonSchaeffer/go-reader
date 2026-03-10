@@ -55,6 +55,11 @@ export const articleModalOpen = writable(false);
 export const openMode = writable('sidebar');
 
 /**
+ * All tags (global list)
+ */
+export const allTags = writable([]);
+
+/**
  * Articles store
  */
 export const articles = writable([]);
