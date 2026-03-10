@@ -1,5 +1,5 @@
 <script>
-	import { Settings, Rss, Tag, Bookmark, Highlighter, Search } from '@lucide/svelte';
+	import { Settings, Rss, Tag, Bookmark, Highlighter, Search, Scissors } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import { CategoryService } from '$lib/services/categoryService';
 	import { selectedFeedId, selectedArticle, currentView } from '$lib/stores';
@@ -143,6 +143,16 @@
 		>
 			<Highlighter size={14} />
 			<span>Highlights</span>
+		</button>
+		<button
+			class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors
+				{$currentView === 'clipper'
+				? 'bg-slate-700 text-surface-100'
+				: 'text-surface-300 hover:bg-slate-700 hover:text-surface-100'}"
+			on:click={() => { currentView.set('clipper'); selectedArticle.set(null); }}
+		>
+			<Scissors size={14} />
+			<span>Web Clipper</span>
 		</button>
 		<button
 			class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors

@@ -9,6 +9,7 @@
 	import LibraryFeed from '$lib/components/LibraryFeed.svelte';
 	import HighlightsView from '$lib/components/HighlightsView.svelte';
 	import SearchView from '$lib/components/SearchView.svelte';
+	import ClipperView from '$lib/components/ClipperView.svelte';
 	import { selectedArticle, currentView, articleModalOpen, openMode } from '$lib/stores';
 </script>
 
@@ -30,6 +31,8 @@
 		<HighlightsView />
 	{:else if $currentView === 'search'}
 		<SearchView />
+	{:else if $currentView === 'clipper'}
+		<ClipperView />
 	{:else}
 		<Feed />
 	{/if}
