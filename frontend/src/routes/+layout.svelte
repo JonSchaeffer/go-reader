@@ -8,6 +8,7 @@
 	import CategoriesManagement from '$lib/components/CategoriesManagement.svelte';
 	import LibraryFeed from '$lib/components/LibraryFeed.svelte';
 	import HighlightsView from '$lib/components/HighlightsView.svelte';
+	import SearchView from '$lib/components/SearchView.svelte';
 	import { selectedArticle, currentView, articleModalOpen, openMode } from '$lib/stores';
 </script>
 
@@ -27,6 +28,8 @@
 		<LibraryFeed />
 	{:else if $currentView === 'highlights'}
 		<HighlightsView />
+	{:else if $currentView === 'search'}
+		<SearchView />
 	{:else}
 		<Feed />
 	{/if}

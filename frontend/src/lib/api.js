@@ -262,6 +262,15 @@ export const libraryApi = {
 };
 
 /**
+ * Unified search API
+ */
+export const searchApi = {
+	async search(q, limit = 40) {
+		return apiRequest(`/search?q=${encodeURIComponent(q)}&limit=${limit}`);
+	}
+};
+
+/**
  * Highlights API functions
  */
 export const highlightApi = {

@@ -91,6 +91,7 @@ func main() {
 	http.HandleFunc("/api/library/search", corsMiddleware(routeLibrarySearch))         // Search library
 	http.HandleFunc("/api/highlights", corsMiddleware(routeHighlights))                // Highlights CRUD
 	http.HandleFunc("/api/highlights/all", corsMiddleware(routeHighlightsAll))         // All highlights with context
+	http.HandleFunc("/api/search", corsMiddleware(routeSearch))                        // Unified full-text search
 
 	// Start RSS fetcher in background
 	ctx, cancel := context.WithCancel(context.Background())
@@ -266,6 +267,15 @@ func routeLibrarySearch(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		rss.SearchLibrary(w, r)
+	default:
+		http.Error(w, "Method is not allowed or supported", http.StatusMethodNotAllowed)
+	}
+}
+
+func routeSearch(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		rss.SearchAll(w, r)
 	default:
 		http.Error(w, "Method is not allowed or supported", http.StatusMethodNotAllowed)
 	}

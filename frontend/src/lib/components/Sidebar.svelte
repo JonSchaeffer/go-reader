@@ -1,5 +1,5 @@
 <script>
-	import { Settings, Rss, Tag, Bookmark, Highlighter } from '@lucide/svelte';
+	import { Settings, Rss, Tag, Bookmark, Highlighter, Search } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import { CategoryService } from '$lib/services/categoryService';
 	import { selectedFeedId, selectedArticle, currentView } from '$lib/stores';
@@ -47,6 +47,18 @@
 
 	<!-- Navigation -->
 	<nav class="flex-1 overflow-y-auto p-2 space-y-1">
+		<!-- Search -->
+		<button
+			class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors
+				{$currentView === 'search'
+				? 'bg-slate-700 text-surface-100'
+				: 'text-surface-300 hover:bg-slate-700 hover:text-surface-100'}"
+			on:click={() => { currentView.set('search'); selectedArticle.set(null); }}
+		>
+			<Search size={14} />
+			<span>Search</span>
+		</button>
+
 		<!-- All Articles -->
 		<button
 			class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors
