@@ -186,19 +186,6 @@
 				</button>
 			{/if}
 
-			<!-- Open mode toggle -->
-			<button
-				on:click={toggleOpenMode}
-				title="Default: open in {$openMode === 'sidebar' ? 'sidebar' : 'full screen'} — click to switch"
-				class="rounded p-1 text-surface-500 transition-colors hover:bg-slate-800 hover:text-surface-100"
-			>
-				{#if $openMode === 'sidebar'}
-					<PanelRight size={14} />
-				{:else}
-					<Maximize2 size={14} />
-				{/if}
-			</button>
-
 			<!-- Search: sliding input + icon + article count -->
 			<div class="flex items-center gap-2">
 				<!-- Expanding input slides out to the left of the icon -->
@@ -212,7 +199,7 @@
 							bind:value={searchQuery}
 							on:input={onSearchInput}
 							on:keydown={onSearchKeydown}
-							placeholder="Search articles…"
+							placeholder="Search"
 							class="min-w-0 flex-1 bg-transparent text-sm text-surface-100 placeholder-surface-500 outline-none"
 						/>
 						{#if searching}
@@ -240,6 +227,19 @@
 					{isSearching ? `${searchResults.length} results` : `${filteredArticles.length} articles`}
 				</span>
 			</div>
+
+			<!-- Open mode toggle -->
+			<button
+				on:click={toggleOpenMode}
+				title="Default: open in {$openMode === 'sidebar' ? 'sidebar' : 'full screen'} — click to switch"
+				class="rounded p-1 text-surface-500 transition-colors hover:bg-slate-800 hover:text-surface-100"
+			>
+				{#if $openMode === 'sidebar'}
+					<PanelRight size={14} />
+				{:else}
+					<Maximize2 size={14} />
+				{/if}
+			</button>
 		</div>
 	</div>
 
