@@ -7,7 +7,6 @@
 	import { HighlightService } from '$lib/services/highlightService';
 	import { readingTime, saveProgress, restoreProgress } from '$lib/utils/readingTime';
 	import HighlightPopover from './HighlightPopover.svelte';
-	import ReaderSettings from './ReaderSettings.svelte';
 	import TagEditor from './TagEditor.svelte';
 
 	let saving = false;
@@ -167,7 +166,7 @@
 <svelte:window
 	on:keydown={handleKeydown}
 	on:mousedown={(e) => {
-		if ($articleModalOpen && !e.target.closest('.highlight-popover') && !e.target.closest('.reader-settings-panel') && !e.target.closest('.reader-settings-btn'))
+		if ($articleModalOpen && !e.target.closest('.highlight-popover'))
 			popover = null;
 	}}
 />
@@ -219,7 +218,6 @@
 							<ExternalLink size={13} /><span>Original</span>
 						</a>
 					{/if}
-					<ReaderSettings />
 					<button on:click={close}
 						class="rounded p-1.5 text-surface-400 transition-colors hover:bg-slate-700 hover:text-surface-100"
 						title="Close (Esc)"><X size={16} /></button>

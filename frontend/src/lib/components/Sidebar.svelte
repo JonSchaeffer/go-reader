@@ -1,5 +1,5 @@
 <script>
-	import { Settings, Rss, Tag, Bookmark, Highlighter, Search, Scissors } from '@lucide/svelte';
+	import { Settings, Rss, Bookmark, Highlighter, Search, Scissors } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import { CategoryService } from '$lib/services/categoryService';
 	import { selectedFeedId, selectedArticle, currentView } from '$lib/stores';
@@ -34,15 +34,8 @@
 
 <aside class="text-surface-100 flex w-56 flex-col bg-slate-800 border-r border-slate-700">
 	<!-- Header -->
-	<header class="flex items-center justify-between bg-slate-800 p-4 border-b border-slate-700">
+	<header class="flex items-center bg-slate-800 p-4 border-b border-slate-700">
 		<h2 class="text-surface-100 font-semibold text-lg">YARR</h2>
-		<button
-			on:click={() => currentView.set('categories-management')}
-			class="text-surface-400 hover:text-surface-100 transition-colors"
-			title="Manage categories"
-		>
-			<Settings size={16} />
-		</button>
 	</header>
 
 	<!-- Navigation -->
@@ -156,23 +149,13 @@
 		</button>
 		<button
 			class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors
-				{$currentView === 'feeds-management'
+				{$currentView === 'settings'
 				? 'bg-slate-700 text-surface-100'
 				: 'text-surface-300 hover:bg-slate-700 hover:text-surface-100'}"
-			on:click={() => currentView.set('feeds-management')}
+			on:click={() => { currentView.set('settings'); selectedArticle.set(null); }}
 		>
-			<Rss size={14} />
-			<span>Manage Feeds</span>
-		</button>
-		<button
-			class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors
-				{$currentView === 'categories-management'
-				? 'bg-slate-700 text-surface-100'
-				: 'text-surface-300 hover:bg-slate-700 hover:text-surface-100'}"
-			on:click={() => currentView.set('categories-management')}
-		>
-			<Tag size={14} />
-			<span>Categories</span>
+			<Settings size={14} />
+			<span>Settings</span>
 		</button>
 	</div>
 </aside>

@@ -7,7 +7,6 @@
 	import { HighlightService } from '$lib/services/highlightService';
 	import { readingTime, saveProgress, restoreProgress } from '$lib/utils/readingTime';
 	import HighlightPopover from './HighlightPopover.svelte';
-	import ReaderSettings from './ReaderSettings.svelte';
 	import TagEditor from './TagEditor.svelte';
 
 	let saving = false;
@@ -151,7 +150,7 @@
 	}
 </script>
 
-<svelte:window on:mousedown={(e) => { if (!e.target.closest('.highlight-popover') && !e.target.closest('.reader-settings-panel') && !e.target.closest('.reader-settings-btn')) popover = null; }} />
+<svelte:window on:mousedown={(e) => { if (!e.target.closest('.highlight-popover')) popover = null; }} />
 
 <aside class="flex w-[420px] flex-shrink-0 flex-col overflow-hidden border-l border-slate-700 bg-slate-800">
 	{#if $selectedArticle}
@@ -198,8 +197,7 @@
 						<ExternalLink size={13} /><span>Original</span>
 					</a>
 				{/if}
-				<ReaderSettings />
-			</div>
+				</div>
 			<button on:click={close} class="rounded p-1 text-surface-400 hover:bg-slate-700 hover:text-surface-100 transition-colors">
 				<X size={16} />
 			</button>
