@@ -77,6 +77,11 @@ func main() {
 		log.Fatal(err)
 	}
 
+	err = db.MigrateReviewColumns()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// Set up HTTP routes with CORS middleware
 	http.HandleFunc("/api/rss", corsMiddleware(routeRss))
 	http.HandleFunc("/api/rss/stats", corsMiddleware(routeRSSStats))             // RSS feed statistics
@@ -99,6 +104,9 @@ func main() {
 	http.HandleFunc("/api/search", corsMiddleware(routeSearch))                        // Unified full-text search
 	http.HandleFunc("/api/tags", corsMiddleware(routeTags))                            // Tags CRUD
 	http.HandleFunc("/api/tags/item", corsMiddleware(routeTagsItem))                   // Item-tag associations
+	http.HandleFunc("/api/review/queue", corsMiddleware(routeReviewQueue))             // Daily review queue
+	http.HandleFunc("/api/review/complete", corsMiddleware(routeReviewComplete))       // Mark reviewed
+	http.HandleFunc("/api/review/count", corsMiddleware(routeReviewCount))             // Queue size badge
 
 	// Start RSS fetcher in background
 	ctx, cancel := context.WithCancel(context.Background())
@@ -342,6 +350,33 @@ func routeTagsItem(w http.ResponseWriter, r *http.Request) {
 		rss.AddItemTag(w, r)
 	case http.MethodDelete:
 		rss.RemoveItemTag(w, r)
+	default:
+		http.Error(w, "Method is not allowed or supported", http.StatusMethodNotAllowed)
+	}
+}
+
+func routeReviewQueue(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		rss.GetReviewQueue(w, r)
+	default:
+		http.Error(w, "Method is not allowed or supported", http.StatusMethodNotAllowed)
+	}
+}
+
+func routeReviewComplete(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		rss.CompleteReview(w, r)
+	default:
+		http.Error(w, "Method is not allowed or supported", http.StatusMethodNotAllowed)
+	}
+}
+
+func routeReviewCount(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		rss.GetReviewCount(w, r)
 	default:
 		http.Error(w, "Method is not allowed or supported", http.StatusMethodNotAllowed)
 	}

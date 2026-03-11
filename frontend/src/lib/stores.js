@@ -60,6 +60,11 @@ export const openMode = writable('sidebar');
 export const allTags = writable([]);
 
 /**
+ * Number of highlights pending review today (for sidebar badge)
+ */
+export const reviewCount = writable(0);
+
+/**
  * Articles store
  */
 export const articles = writable([]);

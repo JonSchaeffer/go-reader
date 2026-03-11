@@ -1,8 +1,8 @@
 <script>
-	import { Settings, Rss, Bookmark, Highlighter, Scissors } from '@lucide/svelte';
+	import { Settings, Rss, Bookmark, Highlighter, Scissors, RefreshCw } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import { CategoryService } from '$lib/services/categoryService';
-	import { selectedFeedId, selectedArticle, currentView } from '$lib/stores';
+	import { selectedFeedId, selectedArticle, currentView, reviewCount } from '$lib/stores';
 
 	let categoriesWithFeeds = [];
 	let expandedCategories = {};
@@ -124,6 +124,21 @@
 		>
 			<Highlighter size={14} />
 			<span>Highlights</span>
+		</button>
+		<button
+			class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors
+				{$currentView === 'review'
+				? 'bg-slate-700 text-surface-100'
+				: 'text-surface-300 hover:bg-slate-700 hover:text-surface-100'}"
+			on:click={() => { currentView.set('review'); selectedArticle.set(null); }}
+		>
+			<RefreshCw size={14} />
+			<span class="flex-1">Daily Review</span>
+			{#if $reviewCount > 0}
+				<span class="rounded-full bg-blue-500 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+					{$reviewCount > 99 ? '99+' : $reviewCount}
+				</span>
+			{/if}
 		</button>
 		<button
 			class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors

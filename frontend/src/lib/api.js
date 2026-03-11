@@ -292,6 +292,21 @@ export const highlightApi = {
 };
 
 /**
+ * Daily review API
+ */
+export const reviewApi = {
+	async getQueue(limit = 5) {
+		return apiRequest(`/review/queue?limit=${limit}`);
+	},
+	async complete(id) {
+		return apiRequest(`/review/complete?id=${id}`, { method: 'POST' });
+	},
+	async getCount() {
+		return apiRequest('/review/count');
+	}
+};
+
+/**
  * Tags API functions
  */
 export const tagApi = {

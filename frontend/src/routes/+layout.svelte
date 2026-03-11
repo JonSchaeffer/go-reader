@@ -8,7 +8,15 @@
 	import HighlightsView from '$lib/components/HighlightsView.svelte';
 	import ClipperView from '$lib/components/ClipperView.svelte';
 	import SettingsView from '$lib/components/SettingsView.svelte';
-	import { selectedArticle, currentView, articleModalOpen, openMode } from '$lib/stores';
+	import ReviewView from '$lib/components/ReviewView.svelte';
+	import { selectedArticle, currentView, articleModalOpen, openMode, reviewCount } from '$lib/stores';
+	import { reviewApi } from '$lib/api';
+	import { onMount } from 'svelte';
+
+	onMount(async () => {
+		const res = await reviewApi.getCount();
+		if (res?.count) reviewCount.set(res.count);
+	});
 </script>
 
 <svelte:head>
@@ -23,6 +31,8 @@
 		<LibraryFeed />
 	{:else if $currentView === 'highlights'}
 		<HighlightsView />
+	{:else if $currentView === 'review'}
+		<ReviewView />
 	{:else if $currentView === 'clipper'}
 		<ClipperView />
 	{:else if $currentView === 'settings'}
