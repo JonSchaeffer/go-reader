@@ -11,6 +11,7 @@
 	import { exportMarkdown, exportCSV } from '$lib/utils/exportHighlights';
 
 	let saving = false;
+	let exportOpen = false;
 	let highlights = [];
 	let popover = null;
 	let contentEl = null;
@@ -167,8 +168,8 @@
 <svelte:window
 	on:keydown={handleKeydown}
 	on:mousedown={(e) => {
-		if ($articleModalOpen && !e.target.closest('.highlight-popover'))
-			popover = null;
+		if ($articleModalOpen && !e.target.closest('.highlight-popover')) popover = null;
+		if (!e.target.closest('.export-menu')) exportOpen = false;
 	}}
 />
 
@@ -220,16 +221,22 @@
 						</a>
 					{/if}
 					{#if highlights.length > 0}
-						<div class="relative group/export">
-							<button class="flex items-center gap-1 rounded px-2 py-1 text-xs text-surface-400 transition-colors hover:bg-slate-700 hover:text-surface-100">
+						<div class="export-menu relative">
+							<button
+								on:click={() => (exportOpen = !exportOpen)}
+								class="flex items-center gap-1 rounded px-2 py-1 text-xs transition-colors
+									{exportOpen ? 'bg-slate-700 text-surface-100' : 'text-surface-400 hover:bg-slate-700 hover:text-surface-100'}"
+							>
 								<Download size={13} /><span>Export</span>
 							</button>
-							<div class="absolute right-0 top-full z-[400] mt-1 hidden group-hover/export:block w-36 rounded-lg border border-slate-600 bg-slate-800 py-1 shadow-xl">
-								<button on:click={() => exportMarkdown(highlights, $selectedArticle.Title)}
-									class="w-full px-3 py-1.5 text-left text-xs text-surface-300 hover:bg-slate-700">Markdown</button>
-								<button on:click={() => exportCSV(highlights, $selectedArticle.Title)}
-									class="w-full px-3 py-1.5 text-left text-xs text-surface-300 hover:bg-slate-700">CSV</button>
-							</div>
+							{#if exportOpen}
+								<div class="absolute right-0 top-full z-[400] mt-1 w-36 rounded-lg border border-slate-600 bg-slate-800 py-1 shadow-xl">
+									<button on:click={() => { exportMarkdown(highlights, $selectedArticle.Title); exportOpen = false; }}
+										class="w-full px-3 py-1.5 text-left text-xs text-surface-300 hover:bg-slate-700">Markdown</button>
+									<button on:click={() => { exportCSV(highlights, $selectedArticle.Title); exportOpen = false; }}
+										class="w-full px-3 py-1.5 text-left text-xs text-surface-300 hover:bg-slate-700">CSV</button>
+								</div>
+							{/if}
 						</div>
 					{/if}
 					<button on:click={close}
