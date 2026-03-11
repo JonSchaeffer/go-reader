@@ -41,7 +41,7 @@
 		<Feed />
 	{/if}
 
-	{#if $selectedArticle && !$articleModalOpen}
+	{#if $selectedArticle && !$articleModalOpen && ($currentView === 'feed' || $currentView === 'library')}
 		<ArticleDetail />
 	{/if}
 </div>
