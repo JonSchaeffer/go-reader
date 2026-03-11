@@ -133,9 +133,9 @@
 			on:click={() => { currentView.set('review'); selectedArticle.set(null); }}
 		>
 			<RefreshCw size={14} />
-			<span class="flex-1">Daily Review</span>
+			<span>Daily Review</span>
 			{#if $reviewCount > 0}
-				<span class="rounded-full bg-blue-500 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+				<span class="ml-auto rounded-full bg-blue-500 px-1.5 py-0.5 text-[10px] font-semibold text-white">
 					{$reviewCount > 99 ? '99+' : $reviewCount}
 				</span>
 			{/if}

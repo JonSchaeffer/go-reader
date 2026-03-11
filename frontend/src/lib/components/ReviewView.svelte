@@ -49,8 +49,9 @@
 		if (!current || completing) return;
 		completing = true;
 		await reviewApi.complete(current.ID);
-		// Update badge count
-		reviewCount.update((n) => Math.max(0, n - 1));
+		// Refresh badge count from server so it's always accurate
+		const res = await reviewApi.getCount();
+		reviewCount.set(res?.count ?? 0);
 		completing = false;
 
 		if (index < queue.length - 1) {
