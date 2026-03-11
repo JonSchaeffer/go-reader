@@ -174,38 +174,8 @@
 		</div>
 
 		<div class="flex items-center gap-2">
-			<!-- Inline search -->
-			{#if searchOpen}
-				<div class="flex items-center gap-1 rounded-md border border-slate-600 bg-slate-800 px-2 py-1">
-					<Search size={13} class="flex-shrink-0 text-surface-500" />
-					<input
-						bind:this={searchInputEl}
-						bind:value={searchQuery}
-						on:input={onSearchInput}
-						on:keydown={onSearchKeydown}
-						placeholder="Search articles…"
-						class="w-48 bg-transparent text-sm text-surface-100 placeholder-surface-500 outline-none"
-					/>
-					{#if searching}
-						<RefreshCw size={12} class="flex-shrink-0 animate-spin text-surface-500" />
-					{/if}
-					<button on:click={closeSearch} class="flex-shrink-0 text-surface-500 hover:text-surface-300 transition-colors">
-						<X size={13} />
-					</button>
-				</div>
-			{:else}
-				<span class="text-surface-500 text-xs">{filteredArticles.length} articles</span>
-				<button
-					on:click={openSearch}
-					title="Search"
-					class="rounded p-1 text-surface-500 transition-colors hover:bg-slate-800 hover:text-surface-100"
-				>
-					<Search size={14} />
-				</button>
-			{/if}
-
-			<!-- Mark all read (only when a specific feed is selected) -->
-			{#if $selectedFeedId && !searchOpen}
+			<!-- Mark all read -->
+			{#if $selectedFeedId}
 				<button
 					on:click={markAllRead}
 					disabled={markingRead}
@@ -216,20 +186,60 @@
 				</button>
 			{/if}
 
-			<!-- Default open mode toggle -->
-			{#if !searchOpen}
-				<button
-					on:click={toggleOpenMode}
-					title="Default: open in {$openMode === 'sidebar' ? 'sidebar' : 'full screen'} — click to switch"
-					class="rounded p-1 text-surface-500 transition-colors hover:bg-slate-800 hover:text-surface-100"
+			<!-- Open mode toggle -->
+			<button
+				on:click={toggleOpenMode}
+				title="Default: open in {$openMode === 'sidebar' ? 'sidebar' : 'full screen'} — click to switch"
+				class="rounded p-1 text-surface-500 transition-colors hover:bg-slate-800 hover:text-surface-100"
+			>
+				{#if $openMode === 'sidebar'}
+					<PanelRight size={14} />
+				{:else}
+					<Maximize2 size={14} />
+				{/if}
+			</button>
+
+			<!-- Search: sliding input + icon + article count -->
+			<div class="flex items-center gap-2">
+				<!-- Expanding input slides out to the left of the icon -->
+				<div
+					class="flex items-center overflow-hidden transition-all duration-300 ease-in-out"
+					style="max-width: {searchOpen ? '220px' : '0px'}; opacity: {searchOpen ? '1' : '0'}"
 				>
-					{#if $openMode === 'sidebar'}
-						<PanelRight size={14} />
+					<div class="flex items-center gap-1 rounded-md border border-slate-600 bg-slate-800 px-2 py-1 w-52">
+						<input
+							bind:this={searchInputEl}
+							bind:value={searchQuery}
+							on:input={onSearchInput}
+							on:keydown={onSearchKeydown}
+							placeholder="Search articles…"
+							class="min-w-0 flex-1 bg-transparent text-sm text-surface-100 placeholder-surface-500 outline-none"
+						/>
+						{#if searching}
+							<RefreshCw size={12} class="flex-shrink-0 animate-spin text-surface-500" />
+						{/if}
+					</div>
+				</div>
+
+				<!-- Icon toggles open/close -->
+				<button
+					on:click={searchOpen ? closeSearch : openSearch}
+					title={searchOpen ? 'Close search' : 'Search'}
+					class="rounded p-1 transition-colors hover:bg-slate-800
+						{searchOpen ? 'text-blue-400 hover:text-blue-300' : 'text-surface-500 hover:text-surface-100'}"
+				>
+					{#if searchOpen}
+						<X size={14} />
 					{:else}
-						<Maximize2 size={14} />
+						<Search size={14} />
 					{/if}
 				</button>
-			{/if}
+
+				<!-- Article count, always visible -->
+				<span class="text-surface-500 text-xs whitespace-nowrap">
+					{isSearching ? `${searchResults.length} results` : `${filteredArticles.length} articles`}
+				</span>
+			</div>
 		</div>
 	</div>
 
