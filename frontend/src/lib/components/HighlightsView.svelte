@@ -1,9 +1,10 @@
 <script>
 	import { onMount } from 'svelte';
-	import { Highlighter, Trash2, StickyNote } from '@lucide/svelte';
+	import { Highlighter, Trash2, StickyNote, Download, Copy, Check } from '@lucide/svelte';
 	import { HighlightService } from '$lib/services/highlightService';
 	import { selectedArticle, visibleArticles, articleModalOpen } from '$lib/stores';
 	import { libraryApi, articleApi } from '$lib/api.js';
+	import { exportMarkdown, exportCSV, copyToClipboard } from '$lib/utils/exportHighlights';
 
 	const COLOR_MAP = {
 		yellow: '#fef08a',
@@ -14,6 +15,13 @@
 
 	let highlights = [];
 	let loading = true;
+	let copied = false;
+
+	async function handleCopy() {
+		await copyToClipboard(highlights);
+		copied = true;
+		setTimeout(() => (copied = false), 2000);
+	}
 
 	onMount(async () => {
 		highlights = await HighlightService.getAll();
@@ -87,6 +95,40 @@
 		<span class="text-sm font-semibold text-surface-100">Highlights</span>
 		{#if !loading}
 			<span class="text-xs text-surface-500">{highlights.length} total</span>
+		{/if}
+
+		{#if !loading && highlights.length > 0}
+			<div class="ml-auto flex items-center gap-1">
+				<button
+					on:click={handleCopy}
+					title="Copy all to clipboard"
+					class="flex items-center gap-1 rounded px-2 py-1 text-xs text-surface-500 transition-colors hover:bg-slate-800 hover:text-surface-100"
+				>
+					{#if copied}
+						<Check size={13} class="text-green-400" />
+						<span class="text-green-400">Copied</span>
+					{:else}
+						<Copy size={13} />
+						<span>Copy</span>
+					{/if}
+				</button>
+				<button
+					on:click={() => exportMarkdown(highlights)}
+					title="Export as Markdown"
+					class="flex items-center gap-1 rounded px-2 py-1 text-xs text-surface-500 transition-colors hover:bg-slate-800 hover:text-surface-100"
+				>
+					<Download size={13} />
+					<span>Markdown</span>
+				</button>
+				<button
+					on:click={() => exportCSV(highlights)}
+					title="Export as CSV"
+					class="flex items-center gap-1 rounded px-2 py-1 text-xs text-surface-500 transition-colors hover:bg-slate-800 hover:text-surface-100"
+				>
+					<Download size={13} />
+					<span>CSV</span>
+				</button>
+			</div>
 		{/if}
 	</div>
 

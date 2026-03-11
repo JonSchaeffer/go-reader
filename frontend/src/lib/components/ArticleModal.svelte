@@ -1,6 +1,6 @@
 <script>
 	import { tick } from 'svelte';
-	import { X, ChevronLeft, ChevronRight, ExternalLink, Circle, CheckCircle, Bookmark } from '@lucide/svelte';
+	import { X, ChevronLeft, ChevronRight, ExternalLink, Circle, CheckCircle, Bookmark, Download } from '@lucide/svelte';
 	import { selectedArticle, visibleArticles, articleModalOpen, readerSettings } from '$lib/stores';
 	import { ArticleService } from '$lib/services/articleService';
 	import { LibraryService } from '$lib/services/libraryService';
@@ -8,6 +8,7 @@
 	import { readingTime, saveProgress, restoreProgress } from '$lib/utils/readingTime';
 	import HighlightPopover from './HighlightPopover.svelte';
 	import TagEditor from './TagEditor.svelte';
+	import { exportMarkdown, exportCSV } from '$lib/utils/exportHighlights';
 
 	let saving = false;
 	let highlights = [];
@@ -217,6 +218,19 @@
 							title="Open original">
 							<ExternalLink size={13} /><span>Original</span>
 						</a>
+					{/if}
+					{#if highlights.length > 0}
+						<div class="relative group/export">
+							<button class="flex items-center gap-1 rounded px-2 py-1 text-xs text-surface-400 transition-colors hover:bg-slate-700 hover:text-surface-100">
+								<Download size={13} /><span>Export</span>
+							</button>
+							<div class="absolute right-0 top-full z-[400] mt-1 hidden group-hover/export:block w-36 rounded-lg border border-slate-600 bg-slate-800 py-1 shadow-xl">
+								<button on:click={() => exportMarkdown(highlights, $selectedArticle.Title)}
+									class="w-full px-3 py-1.5 text-left text-xs text-surface-300 hover:bg-slate-700">Markdown</button>
+								<button on:click={() => exportCSV(highlights, $selectedArticle.Title)}
+									class="w-full px-3 py-1.5 text-left text-xs text-surface-300 hover:bg-slate-700">CSV</button>
+							</div>
+						</div>
 					{/if}
 					<button on:click={close}
 						class="rounded p-1.5 text-surface-400 transition-colors hover:bg-slate-700 hover:text-surface-100"
